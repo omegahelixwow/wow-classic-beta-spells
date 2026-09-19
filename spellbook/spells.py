@@ -34,12 +34,14 @@ def ranks(sid, show_sod=False):
               "from SpellName n join Spell s on s.ID=n.ID join SpellOrigin o on o.SpellID=n.ID "
               "where n.Name_lang=? and s.NameSubtext_lang like 'Rank %'", (name,))
     cands = [c for c in cands if RANK_RE.match(c["sub"])]                # "Rank 3" only, not e.g. "Rank Passive"
-    homes = {(r["Cat"], r["Sub"]) for r in q("select Cat, Sub from Classification where SpellID=?", (sid,))}
+    # same home = same list AND the same kind of entry (a direct spell, or one linked in through another spell): the helper /
+    # learn spells linked to a rank share its name and text but are not ranks themselves
+    homes = {(r["Cat"], r["Sub"], r["Linked"]) for r in q("select Cat, Sub, Linked from Classification where SpellID=?", (sid,))}
     if homes:
         marks = ",".join("?" * len(cands))
         home_of = {}
-        for r in q(f"select SpellID, Cat, Sub from Classification where SpellID in ({marks})", [c["id"] for c in cands]):
-            home_of.setdefault(r["SpellID"], set()).add((r["Cat"], r["Sub"]))
+        for r in q(f"select SpellID, Cat, Sub, Linked from Classification where SpellID in ({marks})", [c["id"] for c in cands]):
+            home_of.setdefault(r["SpellID"], set()).add((r["Cat"], r["Sub"], r["Linked"]))
         cands = [c for c in cands if home_of.get(c["id"], set()) & homes]
     me = origin_of(sid)
     out = [{"id": int(c["id"]), "rank": int(RANK_RE.match(c["sub"]).group(1)), "level": int(c["level"] or 0), "origin": c["origin"],
@@ -53,7 +55,27 @@ def origin_of(sid):
 
 
 # ---------------------------------------------------------------- pieces of the detail page
-def _effects(effects):
+def _scaling(sid, e, duration_ms):
+    """What a player wants to know about one effect: its value at level 60, the damage range, spell-power / attack-power
+    coefficients, and for periodic effects the per-tick and total figures (ticks = duration / period).
+    EffectBonusCoefficient is per tick on a periodic effect, so the total is coefficient x ticks."""
+    n = int(e.get("EffectIndex") or 0) + 1
+    value = descriptions.eff_points(sid, n)
+    period = int(num(e.get("EffectAuraPeriod")))
+    variance = num(e.get("Variance"))
+    sp, ap = round(num(e.get("EffectBonusCoefficient")), 4), round(num(e.get("BonusCoefficientFromAP")), 4)
+    out = {"value": value, "periodic": period > 0, "range": None, "period": None, "ticks": None,
+           "perTick": None, "total": None, "sp": sp or None, "ap": ap or None, "spTotal": None, "apTotal": None}
+    if period > 0:
+        ticks = round(duration_ms / period) if duration_ms > 0 else 0
+        out.update(period=period / 1000, ticks=ticks or None, perTick=value, total=value * ticks if ticks else None,
+                   spTotal=sp * ticks if sp and ticks else None, apTotal=ap * ticks if ap and ticks else None)
+    elif variance and value:
+        out["range"] = [round(value * (1 - variance / 2)), round(value * (1 + variance / 2))]
+    return out
+
+
+def _effects(sid, effects, duration_ms):
     out = []
     for e in effects:
         eid, aid = int(e.get("Effect") or 0), int(e.get("EffectAura") or 0)
@@ -65,6 +87,7 @@ def _effects(effects):
             "effectAttributes": decode("SpellEffectAttributes", e.get("EffectAttributes")),
             "mechanic": label("Mechanics", e["EffectMechanic"]) if int(e.get("EffectMechanic") or 0) else None,
             "basePoints": e.get("EffectBasePointsF"),
+            "scaling": _scaling(sid, e, duration_ms),
             "amplitude(ms)": e.get("EffectAmplitude"),
             "targets": [label("Targets", e[f"ImplicitTarget_{i}"]) for i in (0, 1) if int(e.get(f"ImplicitTarget_{i}") or 0)],
             "triggerSpell": e.get("EffectTriggerSpell"),
@@ -261,7 +284,7 @@ def spell(sid, show_sod=False):
         "categories": {"mechanic": label("Mechanics", cats["Mechanic"]) if int(cats.get("Mechanic") or 0) else None,
                        "dispel": label("DispelType", cats["DispelType"]) if int(cats.get("DispelType") or 0) else None},
         "level": first("SpellLevels", "SpellID", sid).get("SpellLevel"),
-        "proc": proc, "effects": _effects(effects), "tables": _raw_tables(sid),
+        "proc": proc, "effects": _effects(sid, effects, int(num(dur.get("Duration")))), "tables": _raw_tables(sid),
     }
 
 
@@ -283,6 +306,20 @@ def tip(sid):
     return t
 
 
+def _n(x, places=3):
+    return f"{x:.{places}f}".rstrip("0").rstrip(".") or "0"
+
+
+def coef_note(sc):
+    """" · SP 0.2/tick = 1 over 5 ticks" -- the coefficient summary shown in tooltips."""
+    bits = []
+    for key, name in (("sp", "SP"), ("ap", "AP")):
+        if sc[key]:
+            bits.append(f"{name} {_n(sc[key])}/tick = {_n(sc[key + 'Total'])} over {sc['ticks']} ticks" if sc["periodic"] and sc["ticks"]
+                        else f"{name} {_n(sc[key])}")
+    return " · " + " · ".join(bits) if bits else ""
+
+
 def tip_from(s):
     """The tooltip summary of an already-built spell() result."""
     p, f = s["proc"], s["flags"]
@@ -293,7 +330,8 @@ def tip_from(s):
                               s["duration"] if s["duration"] != "—" else None, ", ".join(s["costs"]) or None) if x],
         "school": ", ".join(s["schools"]), "description": s["description"], "aura": s["auraDescription"],
         "effects": [e["effect"].split(" (")[0] + (f" → {e['aura'].split(' (')[0]}" if e["aura"] else "")
-                    + (f" [{e['basePoints']}]" if e["basePoints"] not in (None, "0") else "") for e in s["effects"]][:4],
+                    + (f" [{e['basePoints']}]" if e["basePoints"] not in (None, "0") else "") + coef_note(e["scaling"])
+                    for e in s["effects"]][:4],
         "proc": p and {"chance": p["chance"], "cooldown": p["cooldown"], "flags": [x["name"] for x in p["triggers"]][:6],
                        "note": s["procNotes"][0] if s["procNotes"] else None},
         "keyFlags": [x["name"] for x in f["periodic"] + f["proc"]][:6],

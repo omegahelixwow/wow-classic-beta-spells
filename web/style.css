@@ -114,6 +114,7 @@ summary{cursor:pointer;color:var(--orange)}
 .flag{display:inline-block;font-size:11.5px;background:var(--panel);border:1px solid var(--line);padding:1px 7px;margin:2px 4px 2px 0;cursor:help}
 .flag i{color:var(--faint);font-style:normal;margin-left:6px}.flag.hot{border-color:var(--orange);color:var(--orange)}
 .grp{margin:6px 0}.grp>b{display:inline-block;min-width:96px;color:var(--dim);font-weight:400;font-size:12px}
+.sc{margin-top:3px}.sc b{color:var(--yellow)}.sc .coef{color:var(--blue)}
 .rkstrip{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:12px 0 0}.rkstrip>b{color:var(--dim);font-weight:400;font-size:12px;margin-right:6px}
 .rkc{background:var(--panel);border:1px solid var(--line);color:var(--fg);padding:2px 8px;cursor:pointer;font:inherit;font-size:12px;line-height:1.2}
 .rkc small{display:block;color:var(--dim);font-size:10px}.rkc:hover{border-color:var(--acc)}.rkc.on{border-color:var(--acc);color:var(--acc);background:var(--panel2)}.rkc.sod{border-color:var(--sod)}

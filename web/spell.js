@@ -1,6 +1,25 @@
 /* The full detail page of one spell. */
 const chips = items => items.length ? `<div style="margin-top:10px">${items.join('')}</div>` : '';
 const bullets = xs => `<ul style="margin:8px 0 0;padding-left:18px" class="dim">${xs.map(n => `<li>${esc(n)}</li>`).join('')}</ul>`;
+// ---- damage / healing numbers and coefficients of one effect ----
+const fnum = (x, d = 3) => (+x).toFixed(d).replace(/0+$/, '').replace(/\.$/, '');
+function scalingHtml(sc) {
+  if (!sc) return '';
+  const rows = [];
+  if (sc.periodic) {
+    rows.push(sc.ticks
+      ? `Per tick <b>${fnum(sc.perTick, 2)}</b> · ${sc.ticks} ticks (every ${fnum(sc.period, 2)} sec) · Total <b>${fnum(sc.total, 2)}</b>`
+      : `Per tick <b>${fnum(sc.perTick, 2)}</b> · every ${fnum(sc.period, 2)} sec`);
+  } else if (sc.range || sc.sp || sc.ap) {
+    rows.push(`Value <b>${fnum(sc.value, 2)}</b>${sc.range ? ` (range ${sc.range[0]}–${sc.range[1]})` : ''}`);
+  }
+  for (const [k, name] of [['sp', 'Spell power'], ['ap', 'Attack power']]) {
+    if (!sc[k]) continue;
+    rows.push(`<span class="coef">${name} coefficient <b>${fnum(sc[k])}</b>${sc.periodic && sc.ticks ? ` per tick × ${sc.ticks} = <b>${fnum(sc[k + 'Total'])}</b> total` : ''}</span>`);
+  }
+  return rows.map(r => `<div class="sc">${r}</div>`).join('');
+}
+const hasCoef = effects => effects.some(e => e.scaling && (e.scaling.sp || e.scaling.ap));
 const ORIGIN_LABEL = {vanilla: 'Vanilla', sod: 'Season of Discovery', new: 'New in this beta'};
 
 async function renderSpell(id) {
@@ -31,8 +50,9 @@ async function renderSpell(id) {
   if (s.proc) h += `<h2>Proc</h2><div class="card">Chance: <b>${s.proc.chance}%</b>${s.proc.cooldown ? ` · Cooldown: <b>${s.proc.cooldown}</b>` : ''}${s.proc.charges && s.proc.charges !== '0' ? ` · Charges: <b>${s.proc.charges}</b>` : ''}<div class="grp"><b>ProcFlags</b>${s.proc.triggers.map(x => flag(x)).join('') || '—'}</div>${s.proc.triggers2.length ? `<div class="grp"><b>ProcFlags2</b>${s.proc.triggers2.map(x => flag(x)).join('')}</div>` : ''}${bullets(s.procNotes)}</div>`;
   else if (s.procNotes.length) h += `<h2>Proc</h2><div class="card">${bullets(s.procNotes)}</div>`;
 
-  h += '<h2>Effects</h2>' + (s.effects.map(e => `<div class="card"><b>#${e.index} ${esc(e.effect)}</b>${e.aura ? ' → ' + esc(e.aura) : ''}
+  h += '<h2>Effects</h2>' + (hasCoef(s.effects) ? '<p class="dim" style="margin:0 0 8px;font-size:12px">Coefficients are as stored in the client data: on a periodic effect they apply to each tick, so the total is the per-tick figure times the number of ticks. Values are scaled to level 60.</p>' : '') + (s.effects.map(e => `<div class="card"><b>#${e.index} ${esc(e.effect)}</b>${e.aura ? ' → ' + esc(e.aura) : ''}
       <div class="dim">Base points: ${esc(e.basePoints)} · Targets: ${esc(e.targets.join(', ') || '—')}${e.triggerSpell && e.triggerSpell !== '0' ? ' · Triggers spell ' + e.triggerSpell : ''}</div>
+      ${scalingHtml(e.scaling)}
       ${e['auraPeriod(ms)'] && e['auraPeriod(ms)'] !== '0' ? `<div class="dim">Tick period: ${e['auraPeriod(ms)']} ms</div>` : ''}${e.mechanic ? `<div class="dim">Mechanic: ${esc(e.mechanic)}</div>` : ''}
       ${e.effectAttributes.length ? `<div class="grp"><b>EffectAttrs</b>${e.effectAttributes.map(x => flag(x)).join('')}</div>` : ''}
       <details><summary>raw</summary>${kv(e.raw)}</details></div>`).join('') || '<p class="dim">None</p>');
