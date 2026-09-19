@@ -70,7 +70,8 @@ def export(out, progress=True, site_only=False):
         _write(api / f"browse-{sod}.json", tree)
     for (cat, sub), fn in used.items():
         rows = [[int(r["id"]), r["name"], r["subtext"] or "", int(r["linked"]), r["via"], r["origin"], r["via_origin"],
-                 ic.get(r["icon"] or ""), int(r["level"] or 0)] for r in browse.raw_rows(cat, sub)]
+                 ic.get(r["icon"] or ""), int(r["level"] or 0), int(r["passive"])]
+                for r in browse.raw_rows(cat, sub)]
         _write(api / "lists" / f"{fn}.json", rows)
     if progress:
         print(f"  navigation + {len(used)} lists   {time.time() - t0:5.0f}s")

@@ -90,6 +90,9 @@ of the beta's own trees, so they stay in place and are marked with a purple dot 
     that method (Execute, Readiness, Feral Charge (Bear)) have a cost or cooldown and stay;
   * spells that exist only inside Warlock's Metamorphosis form (found through the form spell's action-bar-override effects);
   * anything reachable only through one of those.
+* **Helper copies are not listed twice.** A linked spell (one with no skill-line row of its own) whose name matches a directly listed *castable*
+  ability is dropped from the list (Holy Light's effect spell). A passive with a castable linked spell keeps both: Touch of the Grave's
+  active drain is the real ability.
 * **Ranks folded into one tile.** With SoD hidden, a SoD spell still fills a rank number that nothing else has (Frostfire Bolt rank 1 is a
   SoD spell, ranks 2-3 are new in this beta), so an ability never starts at rank 2 -- but a SoD rank never duplicates an existing one.
   The Python (`browse.with_sod_ranks`) and browser (`static.js`) versions are checked against each other.

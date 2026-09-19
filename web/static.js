@@ -64,7 +64,7 @@ async function listRows(cat, sub) {
   const c = tree.find(x => x.cat === cat), s = c && c.subs.find(x => x.sub === sub);
   if (!s) return [];
   const rows = await getJSON(`api/lists/${s.file}.json`) || [];
-  return rows.map(r => ({id: r[0], name: r[1], subtext: r[2], linked: r[3], via: r[4], origin: r[5], via_origin: r[6], icon: r[7], level: r[8]}));
+  return rows.map(r => ({id: r[0], name: r[1], subtext: r[2], linked: r[3], via: r[4], origin: r[5], via_origin: r[6], icon: r[7], level: r[8], passive: r[9]}));
 }
 
 function foldRows(rows, offset, limit) {
@@ -81,7 +81,7 @@ function foldRows(rows, offset, limit) {
     const [, , r] = members[members.length - 1];                   // the highest rank stands for the ability
     const ranked = members.filter(t => t[0]);
     const item = {id: r.id, name: r.name, subtext: r.subtext || '', linked: !!r.linked, via: r.via, origin: r.origin,
-                  icon: r.icon, level: String(r.level || 0), ranks: ranked.length > 1 ? ranked.length : 0};
+                  icon: r.icon, level: String(r.level || 0), passive: !!r.passive, ranks: ranked.length > 1 ? ranked.length : 0};
     if (item.ranks) {
       item.rankRange = [ranked[0][0], ranked[ranked.length - 1][0]];
       item.levels = [Math.min(...ranked.map(t => t[1])), Math.max(...ranked.map(t => t[1]))];
@@ -89,9 +89,9 @@ function foldRows(rows, offset, limit) {
     }
     items.push(item);
   }
-  // a linked ranked family that duplicates a direct ranked one (same name) is a helper-spell copy: drop it
-  const directRanked = new Set(items.filter(i => i.ranks && !i.linked).map(i => i.name));
-  const kept = items.filter(i => !(i.linked && i.ranks && directRanked.has(i.name)));
+  // a linked spell whose name matches a directly listed CASTABLE one is a helper-spell copy: drop it (see browse.fold)
+  const directCastable = new Set(items.filter(i => !i.linked && !i.passive).map(i => i.name));
+  const kept = items.filter(i => !(i.linked && directCastable.has(i.name)));
   return {total: kept.length, spells: new Set(rows.map(r => r.id)).size, offset, items: kept.slice(offset, offset + limit)};
 }
 

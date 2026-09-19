@@ -18,7 +18,8 @@ def raw_rows(cat, sub):
             "select c.SpellID id, n.Name_lang name, s.NameSubtext_lang subtext, c.Linked linked, c.Via via, o.Origin origin, "
             "coalesce((select v.Origin from SpellOrigin v where v.SpellID=c.ViaID), '') via_origin, "
             "(select SpellIconFileDataID from SpellMisc m where m.SpellID=c.SpellID limit 1) icon, "
-            "(select SpellLevel from SpellLevels l where l.SpellID=c.SpellID limit 1) level "
+            "(select SpellLevel from SpellLevels l where l.SpellID=c.SpellID limit 1) level, "
+            "exists(select 1 from SpellMisc m where m.SpellID=c.SpellID and (cast(m.Attributes_0 as integer) & 64) != 0) passive "
             "from Classification c join SpellName n on n.ID=c.SpellID join SpellOrigin o on o.SpellID=c.SpellID "
             "left join Spell s on s.ID=c.SpellID where c.Cat=? and c.Sub=? "
             "order by c.Linked, c.Via, (n.Name_lang=''), n.Name_lang, cast(c.SpellID as integer)", (cat, sub))
@@ -44,16 +45,17 @@ def fold(rows, offset=0, limit=300):
         ranked = [t for t in members if t[0]]
         item = {"id": int(r["id"]), "name": r["name"], "subtext": r["subtext"] or "", "linked": bool(int(r["linked"])),
                 "via": r["via"], "origin": r["origin"], "icon": ic.get(r["icon"] or ""), "level": r["level"],
-                "ranks": len(ranked) if len(ranked) > 1 else 0}
+                "passive": bool(int(r["passive"])), "ranks": len(ranked) if len(ranked) > 1 else 0}
         if item["ranks"]:
             item["rankRange"] = [ranked[0][0], ranked[-1][0]]
             item["levels"] = [min(t[1] for t in ranked), max(t[1] for t in ranked)]
             item["rankList"] = [{"id": int(t[2]["id"]), "rank": t[0], "level": t[1], "origin": t[2]["origin"]} for t in ranked]
         items.append(item)
-    # A ranked ability often has a same-named ranked family of helper spells linked to it (the effect spells that carry the
-    # numbers). Listing both shows the ability twice, so the linked copy is dropped when a direct one with that name exists.
-    direct_ranked = {it["name"] for it in items if it["ranks"] and not it["linked"]}
-    items = [it for it in items if not (it["linked"] and it["ranks"] and it["name"] in direct_ranked)]
+    # An ability you cast often has same-named helper spells linked to it (the effect / aura spells that carry the numbers).
+    # Listing them shows the ability twice, so a linked spell is dropped when a directly listed CASTABLE one has its name.
+    # (A passive with a castable linked spell -- Touch of the Grave -- keeps both: the linked one is the real ability.)
+    direct_castable = {it["name"] for it in items if not it["linked"] and not it["passive"]}
+    items = [it for it in items if not (it["linked"] and it["name"] in direct_castable)]
     return {"total": len(items), "spells": len({r["id"] for r in rows}), "offset": offset, "items": items[offset:offset + limit]}
 
 
