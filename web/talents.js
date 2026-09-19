@@ -86,6 +86,8 @@ function nodeTipHtml(n) {
   if (mx > 1 && r === 0) h += `<div class="s" style="margin-top:6px">Max rank: ${esc(e.ranks[mx - 1] || '')}</div>`;
   const aff = (e.affects || []).filter(a => state.sod || a.origin !== 'sod').map(a => a.name);
   if (aff.length) h += `<div class="aff">Affects: ${esc(aff.slice(0, 10).join(', '))}${aff.length > 10 ? ` +${aff.length - 10} more` : ''}</div>`;
+  for (const a of (e.applies || []).filter(a => state.sod || a.origin !== 'sod'))                 // the aura / debuff this talent applies
+    h += `<div class="aff"><b>Applies ${esc(a.name)}:</b> <span class="dim">${esc(a.text)}</span></div>`;
   h += issues.length ? issues.map(i => `<div class="bad">${esc(i)}</div>`).join('') : (r < mx ? '<div class="ok">Available</div>' : '');
   return h + `<div class="hint">Spell ${e.spell} · shift-click to open</div>`;
 }

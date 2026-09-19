@@ -116,6 +116,9 @@ summary{cursor:pointer;color:var(--orange)}
 .flag i{color:var(--faint);font-style:normal;margin-left:6px}.flag.hot{border-color:var(--orange);color:var(--orange)}
 .grp{margin:6px 0}.grp>b{display:inline-block;min-width:96px;color:var(--dim);font-weight:400;font-size:12px}
 .sc{margin-top:3px}.sc b{color:var(--yellow)}.sc .coef{color:var(--blue)}
+.card.child{border-left:3px solid var(--blue)}.card.nested{margin:6px 0 0 16px;background:var(--bg)}
+.card.child .rel{margin-bottom:4px}.ctext{color:var(--fg);margin:2px 0 4px;overflow-wrap:anywhere}
+.aff-blk{margin-top:4px;padding-top:4px;border-top:1px dashed var(--line)}.aff-blk:first-of-type{border-top:0}
 .afc{background:var(--panel);border:1px solid var(--line);color:var(--fg);padding:1px 8px;margin:4px 4px 0 0;cursor:pointer;font:inherit;font-size:12px}
 .afc:hover{border-color:var(--acc)}.afc small{color:var(--dim)}.afc.sod{border-color:var(--sod)}.mod{color:var(--yellow)}
 #tip .aff{margin-top:6px;color:var(--blue)}

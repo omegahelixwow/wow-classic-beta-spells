@@ -1,7 +1,7 @@
 """Everything about one spell: the full detail page, the hover tooltip summary, and name / id search."""
 import re
 
-from . import affects, descriptions, talents
+from . import affects, descriptions, links, talents
 from .db import (class_names, columns, conn, first, fmt_ms, icon_of, nz, num, one, q, races, rows, scalar,
                  skills)
 from .flags import decode, label
@@ -194,13 +194,21 @@ def referenced_by(sid, limit=12):
     return [i for i in _refs.get(str(sid), []) if i != str(sid)][:limit]
 
 
-def _related(sid, name, effects, sp, show_sod):
+def _link_ids(sid):
+    """Ids already shown as triggered / triggering spells, so "Related spells" does not repeat them."""
+    ids = {str(c["id"]) for c in links.triggers(sid)} | {str(p["id"]) for p in links.triggered_by(sid)}
+    for u in links.used_by(sid):
+        ids |= {str(m["id"]) for m in u["members"]}
+    return ids
+
+
+def _related(sid, name, effects, sp, show_sod, skip=()):
     """Spells linked to this one: triggered by an effect, mentioned in the text, mentioning this one, or same-name labelled."""
     rel = {}
 
     def add(i, why):
         i = str(i)
-        if not i or i == "0" or i == sid or i in rel:
+        if not i or i == "0" or i == sid or i in rel or i in skip:
             return
         n = one("SpellName", i)
         if n and (show_sod or origin_of(i) != "sod"):
@@ -280,7 +288,7 @@ def spell(sid, show_sod=False):
         "equipped": [{"class": r["EquippedItemClass"], "subclassMask": r["EquippedItemSubclass"], "invTypeMask": r["EquippedItemInvTypes"]}
                      for r in rows("SpellEquippedItems", "SpellID", sid)],
         "stances": decode("SpellShapeshiftMask", shift.get("ShapeshiftMask_0")) if int(shift.get("ShapeshiftMask_0") or 0) else [],
-        "related": _related(sid, name["Name_lang"], effects, sp, show_sod),
+        "related": _related(sid, name["Name_lang"], effects, sp, show_sod, skip=_link_ids(sid)),
         "procNotes": _proc_notes(proc, aura, flat_names),
         "cast": fmt_ms(cast.get("Base")) or "Instant",
         "duration": fmt_ms(dur.get("Duration")) or "—",
@@ -294,6 +302,7 @@ def spell(sid, show_sod=False):
         "level": first("SpellLevels", "SpellID", sid).get("SpellLevel"),
         "proc": proc, "effects": _effects(sid, effects, int(num(dur.get("Duration")))), "tables": _raw_tables(sid),
         "affects": affects.affected(sid),
+        "triggers": links.triggers(sid), "triggeredBy": links.triggered_by(sid), "usedBy": links.used_by(sid),
     }
 
 

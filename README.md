@@ -112,6 +112,17 @@ affects each Frostbolt rank. For flat / percentage modifier auras the effect's m
 cooldown, power cost ... from TrinityCore's `SpellModOp`), shown with the value. Only spells that appear in a class list count as
 affected (not NPC copies or helper spells). The spell page has an **Affects** section, and talent tooltips list the spells.
 
+## Trigger links (`links.py`)
+Every spell page shows how it connects to other spells, from the client data alone:
+* **Triggers / applies** -- child spells, each with its text, its effects and what it affects (class-mask spells, or a damage school
+  for auras like Shadow Vulnerability's "Shadow: +4%"), plus one nested level. A child is a spell an effect names
+  (`EffectTriggerSpell`), or one whose *duration* the text uses (`$17794d`): Improved Shadow Bolt's proc is server logic, so its text
+  is the only link to the debuff it applies.
+* **Triggered by** -- the parents: the reverse of the above, plus spells whose numbers this one takes (`$1260189s1`: Touch of the
+  Grave's active drain reads the passive's 5%).
+* **Used by** -- spells whose text takes its numbers from this one (the drain behind a passive proc).
+Talent tooltips add an "Applies ..." line for the aura the talent applies.
+
 ## Links out
 Every spell page links to the same spell on Wowhead's Forever database (`wowhead.com/forever/spell=<id>`), which tracks this game version.
 

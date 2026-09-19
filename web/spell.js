@@ -23,18 +23,44 @@ const hasCoef = effects => effects.some(e => e.scaling && (e.scaling.sp || e.sca
 // Wowhead's "Forever" database is the one for this game version (patch 1.60.1); /spell=<id> works without the name slug.
 const wowheadUrl = id => `https://www.wowhead.com/forever/spell=${id}`;
 // ---- "Affects": the spells a modifier (a talent, usually) applies to, found through class masks ----
-function affectsHtml(groups) {
-  const vis = sp => state.sod ? sp.members : sp.members.filter(m => m.origin !== 'sod');       // hide SoD spells unless the switch is on
-  const cards = (groups || []).map(g => {
-    const chips = g.spells.map(sp => {
-      const m = vis(sp); if (!m.length) return '';
-      const top = m[m.length - 1], sod = m.every(x => x.origin === 'sod');
-      return `<button class="afc${sod ? ' sod' : ''}" data-go="${top.id}">${esc(sp.name)}${m.length > 1 ? ` <small>R${m[0].rank}–${top.rank}</small>` : ''}</button>`;
-    }).join('');
-    if (!chips) return '';
-    return `<div class="card"><b>#${g.effect} ${esc(g.aura)}</b>${g.op ? ` · ${esc(g.op)}` : ''}${g.value ? ` · <b class="mod">${esc(g.value)}</b>` : ''}<div>${chips}</div></div>`;
+const visMembers = sp => state.sod ? sp.members : sp.members.filter(m => m.origin !== 'sod');   // hide SoD spells unless the switch is on
+/** Chips for spells grouped by name ({name, members:[{id, rank, origin}]}); a chip opens the top visible rank. */
+function spellChips(spells) {
+  return (spells || []).map(sp => {
+    const m = visMembers(sp); if (!m.length) return '';
+    const top = m[m.length - 1], sod = m.every(x => x.origin === 'sod');
+    return `<button class="afc${sod ? ' sod' : ''}" data-go="${top.id}">${esc(sp.name)}${m.length > 1 ? ` <small>R${m[0].rank}–${top.rank}</small>` : ''}</button>`;
   }).join('');
+}
+/** One block per class-mask effect: what it changes, by how much, and the spells it applies to. */
+function affectBlocks(groups) {
+  return (groups || []).map(g => {
+    const chips = spellChips(g.spells);
+    return chips ? `<div class="aff-blk"><span class="dim">Affects</span> <b>#${g.effect} ${esc(g.aura)}</b>${g.op ? ` · ${esc(g.op)}` : ''}${g.value ? ` · <b class="mod">${esc(g.value)}</b>` : ''}<div>${chips}</div></div>` : '';
+  }).join('');
+}
+function affectsHtml(groups) {
+  const cards = (groups || []).map(g => { const b = affectBlocks([g]); return b ? `<div class="card">${b}</div>` : ''; }).join('');
   return cards ? `<h2>Affects</h2><p class="dim" style="margin:0 0 8px;font-size:12px">Spells this one modifies: each effect's class mask is matched against every spell's class mask in the same class family. Values are per rank of the talent.</p>${cards}` : '';
+}
+
+// ---- links between spells: what this spell triggers / applies (with what those do), and what triggers it ----
+function childCard(c, depth) {
+  if (!state.sod && c.origin === 'sod') return '';
+  const effs = (c.effects || []).map(x => `<div class="sc">${esc(x.aura || x.effect)}${x.detail ? ` · <b class="mod">${esc(x.detail)}</b>` : ''}</div>`).join('');
+  const kids = (c.children || []).map(k => childCard(k, depth + 1)).join('');
+  return `<div class="card child${depth ? ' nested' : ''}"><button class="rel" data-go="${c.id}">${icon(c.icon)}<span>${esc(c.name)}${c.subtext ? ` <span class="dim">${esc(c.subtext)}</span>` : ''}</span> ${sodBadge(c.origin)}<small>${esc(c.why)}</small></button>
+    ${c.text ? `<div class="ctext">${esc(c.text)}</div>` : ''}${effs}${affectBlocks(c.affects)}${kids}</div>`;
+}
+function linksHtml(s) {
+  let h = '';
+  const kids = (s.triggers || []).map(c => childCard(c, 0)).join('');
+  if (kids) h += `<h2>Triggers / applies</h2><p class="dim" style="margin:0 0 8px;font-size:12px">Spells this one triggers or applies (an explicit trigger, or its text uses that spell's duration), with what they do and what they affect.</p>${kids}`;
+  const parents = (s.triggeredBy || []).filter(p => state.sod || p.origin !== 'sod');
+  if (parents.length) h += `<h2>Triggered by</h2>` + parents.map(p => `<button class="rel" data-go="${p.id}">${icon(p.icon)}<span>${esc(p.name)}</span> ${sodBadge(p.origin)}<small>${esc(p.why)}</small></button>`).join('');
+  const users = spellChips(s.usedBy);
+  if (users) h += `<h2>Used by</h2><p class="dim" style="margin:0 0 4px;font-size:12px">Spells whose text takes its numbers from this one.</p><div>${users}</div>`;
+  return h;
 }
 const ORIGIN_LABEL = {vanilla: 'Vanilla', sod: 'Season of Discovery', new: 'New in this beta'};
 
@@ -74,6 +100,7 @@ async function renderSpell(id) {
       <details><summary>raw</summary>${kv(e.raw)}</details></div>`).join('') || '<p class="dim">None</p>');
 
   h += affectsHtml(s.affects);
+  h += linksHtml(s);
 
   const F = s.flags, sec = (t, xs, hot) => xs.length ? `<div class="grp"><b>${t}</b>${xs.map(x => flag(x, hot)).join('')}</div>` : '';
   const key = sec('Periodic', F.periodic, 1) + sec('Proc', F.proc, 1) + sec('Interrupt', F.interrupt) + sec('Aura interrupt', F.auraInterrupt) + sec('Channel interrupt', F.channelInterrupt) + sec('Target flags', F.targets)
