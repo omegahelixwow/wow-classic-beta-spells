@@ -23,6 +23,7 @@ h2{font-size:13px;margin:26px 0 8px;padding-bottom:4px;border-bottom:1px solid v
 h2::before{content:"## ";color:var(--faint)}
 .sub{color:var(--dim);margin-bottom:10px}
 .dim{color:var(--dim)}
+a.ext{color:var(--blue);text-decoration:none;border-bottom:1px dotted var(--blue);white-space:nowrap}a.ext:hover{color:var(--acc);border-bottom-color:var(--acc)}
 table{border-collapse:collapse;width:100%;font-size:12px}
 td,th{border-bottom:1px solid var(--line);padding:4px 8px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
 th{color:var(--dim);font-weight:400;width:34%}

@@ -105,6 +105,9 @@ tab"); per-rank values come from curves. Only the nine class trees (currency 382
 Tabs are the columns of nodes, named after the skill line most of their spells belong to. Three nodes have coordinates 10x
 too large in the data (2 Hunter, 1 Priest); they are shown separately as "off-grid".
 
+## Links out
+Every spell page links to the same spell on Wowhead's Forever database (`wowhead.com/forever/spell=<id>`), which tracks this game version.
+
 ## Known limits
 * Description text resolves `$s $m $o $t $d $a $x $h`, `${expr}`, `$/N;`, `$l..:..;`; conditionals (`$?s...`) stay raw.
   Values scale to level 60 but are capped at each spell's own MaxLevel, as the client does.

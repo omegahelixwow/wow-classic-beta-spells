@@ -20,6 +20,8 @@ function scalingHtml(sc) {
   return rows.map(r => `<div class="sc">${r}</div>`).join('');
 }
 const hasCoef = effects => effects.some(e => e.scaling && (e.scaling.sp || e.scaling.ap));
+// Wowhead's "Forever" database is the one for this game version (patch 1.60.1); /spell=<id> works without the name slug.
+const wowheadUrl = id => `https://www.wowhead.com/forever/spell=${id}`;
 const ORIGIN_LABEL = {vanilla: 'Vanilla', sod: 'Season of Discovery', new: 'New in this beta'};
 
 async function renderSpell(id) {
@@ -27,7 +29,7 @@ async function renderSpell(id) {
   const s = await api('spell/' + id);
   if (seq !== routeSeq) return;
 
-  let h = `<div class="head">${icon(s.icon)}<div><h1>${esc(s.name)}</h1><div class="sub" style="margin:0">Spell ${s.id}${s.subtext ? ' · ' + esc(s.subtext) : ''}</div></div></div>`;
+  let h = `<div class="head">${icon(s.icon)}<div><h1>${esc(s.name)}</h1><div class="sub" style="margin:0">Spell ${s.id}${s.subtext ? ' · ' + esc(s.subtext) : ''} · <a class="ext" href="${wowheadUrl(s.id)}" target="_blank" rel="noopener noreferrer" title="Open this spell on Wowhead (Forever)">Wowhead ↗</a></div></div></div>`;
   const tags = [`<span class="tag${s.origin === 'sod' ? ' sod' : ''}" title="${esc(s.originNote)}">${ORIGIN_LABEL[s.origin]}</span>`];
   if (s.hidden) tags.push(`<span class="tag" title="This spell is left out of the lists">hidden from lists: ${esc(s.hidden)}</span>`);
   s.talents.forEach(t => tags.push(`<a class="tag acc" href="#talents/${t.tree}">Talent · ${esc(t.title)} · ${esc(t.tab)} · row ${t.row || '?'} · ${t.maxRanks} rank${t.maxRanks > 1 ? 's' : ''}</a>`));
