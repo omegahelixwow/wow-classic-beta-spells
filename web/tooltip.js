@@ -25,17 +25,19 @@ function tipPlace() {
 }
 const tipHide = () => { tipId = null; clearTimeout(tipTimer); tipEl.hidden = true; };
 
+// ids of items are prefixed "i" so they do not collide with spell ids in the cache / current-tooltip check
 async function tipShow(id) {
-  if (!tipCache[id]) { try { tipCache[id] = await api('tip/' + id); } catch (e) { tipCache[id] = null; } }
+  const isItem = id[0] === 'i';
+  if (!tipCache[id]) { try { tipCache[id] = await api((isItem ? 'itip/' : 'tip/') + (isItem ? id.slice(1) : id)); } catch (e) { tipCache[id] = null; } }
   if (tipId !== id || !tipCache[id]) return;
-  tipEl.innerHTML = tipHtml(tipCache[id]); tipEl.hidden = false; tipPlace();
+  tipEl.innerHTML = isItem ? itemTipHtml(tipCache[id]) : tipHtml(tipCache[id]); tipEl.hidden = false; tipPlace();
 }
 
 // spell tiles / related buttons carry data-go, search results carry data-id
 const tipTarget = e => {
-  const el = e.target.closest('[data-go],#res button[data-id]');
+  const el = e.target.closest('[data-go],[data-item],#res button[data-id]');
   if (el && el.classList.contains('tile') && e.target.closest('.rkpop') && !e.target.closest('.rkb')) return null;   // strip chrome: keep the current tooltip
-  return el && {el, id: el.dataset.go || el.dataset.id};
+  return el && {el, id: el.dataset.item ? 'i' + el.dataset.item : (el.dataset.kind === 'item' ? 'i' : '') + (el.dataset.go || el.dataset.id)};
 };
 document.addEventListener('mouseover', e => {
   const t = tipTarget(e); if (!t || t.id === tipId) return;

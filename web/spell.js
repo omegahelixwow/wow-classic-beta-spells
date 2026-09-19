@@ -75,7 +75,7 @@ function weaponNote(e, s) {
   // Observed in play: a wand also gets a plain base damage stat (spell power / spell damage) added on top. The spell data has no
   // coefficient for it, because the game applies that stat by its own rules, so it cannot be read from these tables.
   const stat = kinds.includes('wand') ? ` In game a base damage stat such as <b>spell power</b> is added on top of that (observed in play; nothing special to wands, and it is not visible in the spell data).` : ` The spell data has no spell-power or attack-power coefficient.`;
-  return `<div class="sc">Scales with: <b>the damage of the ${kinds.length ? kinds.join(' / ') + ' you have equipped' : 'weapon you use'}</b> · its item level and quality set its damage per second, which is multiplied by its speed.${stat}</div>`;
+  return `<div class="sc">Scales with: <b>the damage of the ${kinds.length ? kinds.join(' / ') + ' you have equipped' : 'weapon you use'}</b>. The weapon's own damage is not in the tables we read; Wowhead shows it.${stat}</div>`;
 }
 /** An effect that applies an item enchantment (imbue, poison, weapon enchant): the enchantment and what it casts. */
 function enchantNote(e) {
@@ -85,17 +85,11 @@ function enchantNote(e) {
 }
 function weaponsHtml(ws) {
   if (!ws || !ws.length) return '';
-  const blocks = ws.map((w, k) => {
-    const rows = w.items.map(i => `<tr data-n="${esc(i[1].toLowerCase())}"><td>${itemLink(i[0], i[1], QUALITY[i[3]])}</td><td>${i[2]}</td><td style="color:${QUALITY_COLOR[QUALITY[i[3]]]}">${QUALITY[i[3]] || i[3]}</td><td>${i[4].toFixed(2)}</td><td>${esc(i[5])}</td><td><b>${i[6]}–${i[7]}</b></td><td class="dim">${i[8]}</td></tr>`).join('');
-    return `<div class="card"><b>${esc(w.weapon)}</b> <span class="dim">· ${w.count} weapons · damage per second from ${esc(w.table)}</span>
-      <input class="wfilter" data-w="${k}" placeholder="Filter ${esc(w.weapon.toLowerCase())}s…" style="margin:6px 0;max-width:280px">
-      <div class="wscroll"><table class="wtbl"><thead><tr><th>Item</th><th>Level</th><th>Quality</th><th>Speed</th><th>School</th><th>Damage</th><th>DPS</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
-  }).join('');
-  return `<h2>Equipped weapon reference</h2><p class="dim" style="margin:0 0 8px;font-size:12px">What this spell's damage is made of: the weapon you hold. Item level and quality give a damage per second, times the weapon's speed, spread by its damage variance. Damage school comes from the weapon too.</p>${blocks}`;
+  return `<h2>Weapons it uses</h2><div>${ws.map(w => `<a class="tag good" href="${itemListHash(2, w.sub)}">${esc(w.weapon)}</a>`).join(' ')}</div>`;
 }
 function itemsUsingHtml(list) {
   if (!list || !list.length) return '';
-  return `<h2>Items that use this spell</h2>` + list.map(i => `<div class="itm">${itemLink(i.id, i.name, i.quality)} <span class="dim">· level ${i.level} · ${esc(i.quality)} · ${esc(i.how)}</span></div>`).join('');
+  return `<h2>Items that use this spell</h2>` + list.map(i => `<div class="itm"><a href="#item/${i.id}" data-item="${i.id}" style="color:${QUALITY_COLOR[i.quality] || 'inherit'}">${esc(i.name)}</a> <a class="ext" href="${itemUrl(i.id)}" target="_blank" rel="noopener noreferrer" title="Wowhead">↗</a> <span class="dim">· level ${i.level} · ${esc(i.quality)} · ${esc(i.how)}</span></div>`).join('');
 }
 const ORIGIN_LABEL = {vanilla: 'Vanilla', sod: 'Season of Discovery', new: 'New in this beta'};
 
@@ -149,8 +143,4 @@ async function renderSpell(id) {
   h += '<h2>Raw table rows</h2>' + Object.entries(s.tables).map(([t, rs]) => `<details><summary>${t} (${rs.length})</summary>${rs.map(kv).join('')}</details>`).join('');
   $('#main').innerHTML = h;
   bindGo();
-  document.querySelectorAll('.wfilter').forEach(inp => inp.oninput = () => {                    // filter a weapon table by name
-    const t = inp.value.toLowerCase();
-    inp.closest('.card').querySelectorAll('tbody tr').forEach(tr => tr.hidden = !!t && !tr.dataset.n.includes(t));
-  });
 }

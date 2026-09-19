@@ -188,3 +188,5 @@ summary{cursor:pointer;color:var(--orange)}
   .tile.ranked:hover .rkpop{display:none}.tile.ranked.open .rkpop{display:grid}
   .rkb{padding:9px 0;font-size:13px}
 }
+.mg{color:#ffd700}.ms{color:#c0c0c0}.mc{color:#cd7f32}
+#items-menu{min-width:280px;max-height:75vh;overflow:auto}

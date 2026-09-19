@@ -123,15 +123,19 @@ Every spell page shows how it connects to other spells, from the client data alo
 * **Used by** -- spells whose text takes its numbers from this one (the drain behind a passive proc).
 Talent tooltips add an "Applies ..." line for the aura the talent applies.
 
-## Item data (`items.py`)
-The item tables (`Item`, `ItemSparse`, `ItemEffect`, `ItemXItemEffect`, `ItemSubClass`, the `ItemDamage*` tables) are part of the build.
-* **Equipped weapon reference.** A spell with a `WEAPON_DAMAGE` effect (Shoot, Auto Shot, Throw ...) has no stat coefficient: the weapon you
-  hold supplies the damage. The spell page lists every weapon of the types it requires (from `SpellEquippedItems`, or bow / gun /
-  crossbow for a ranged-slot spell) with its damage: `ItemDamage<Type>[item level][quality]` gives damage per second, times the weapon's
-  speed, spread by its variance. Test and monster items are filtered out. The formula follows TrinityCore's `GetDPS`; it produces plausible
-  classic numbers but has not been checked against in-game tooltips.
-  The spell data carries no coefficient for a wand, but in game a base damage stat such as spell power is added on top (reported from play;
-  the game applies it by its own rules, so it is not in the tables). That also makes flat spell-damage auras (Adaptation's +11) ordinary contributors.
+## Items (`items.py`, `web/items.js`)
+Items are first-class: an **Items** menu in the top bar (by item class and subclass), item pages (`#item/<id>`), hover tooltips, item
+results in search, and links from spell pages ("Items that use this spell"). Tables: `Item`, `ItemSparse`, `ItemClass`, `ItemSubClass`,
+`ItemEffect`, `ItemXItemEffect`, `RandPropPoints`, `ItemArmorTotal`, `ItemArmorQuality`, `ArmorLocation`.
+* **SoD items** are found the same way as SoD spells: by which Era build first has the item id (`ItemOrigin`); hidden unless "Show SoD" is on.
+* **Stats** = the item's `StatPercentEditor` share of the slot budget in `RandPropPoints[item level]` (Good / Superior / Epic column by quality,
+  slot column by inventory type). **Armor** = `ItemArmorTotal x ItemArmorQuality x ArmorLocation`. Both reproduce Wowhead's numbers for the
+  items checked (Brightcloth Robe 70 armor, Inferno Gloves 55 armor / +9 Intellect). Stats with no public name (id 85) are spell effects and are
+  left to the item's spell list. Test / monster / placeholder items are hidden from lists and search (pages still open by id).
+* **Weapon damage is not shown.** It is not derivable from these tables (an earlier attempt computed numbers that did not match Wowhead and was
+  removed); item pages link to Wowhead instead. A weapon-damage spell (Shoot, Auto Shot) says it scales with the equipped weapon and links to
+  the weapon lists it uses. The spell data has no coefficient for a wand; in game a base damage stat such as spell power is added on top
+  (reported from play, not in the tables).
 * **Items that use this spell** -- items with an effect that casts it (use / equip / chance on hit / teach).
 * **Enchantments.** A spell that applies an item enchantment (poisons, imbues, weapon enchants; effect types 53, 54, 92, 156 and this build's
   360) shows the enchantment, and the spells it casts become children in the trigger links: Scroll of Imbue Quickening -> Imbue Quickening ->

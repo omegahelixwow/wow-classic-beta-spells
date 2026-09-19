@@ -32,6 +32,7 @@ async function renderHome() {
       <div class="stats">
         <div class="s g"><b>${n(cat('Class').count)}</b><span>class spells</span></div>
         <div class="s b"><b>${n(cat('Racial').count)}</b><span>racial spells</span></div>
+        <div class="s y"><b>${n((IT || []).reduce((a, c) => a + c.count, 0))}</b><span>items</span></div>
         <div class="s y"><b>${TI.length} / ${n(talentNodes)}</b><span>talent trees / talents</span></div>
         <div class="s"><b>${n(o.vanilla)}</b><span>vanilla spells</span></div>
         <div class="s y"><b>${n(o.new)}</b><span>new in this beta</span></div>
@@ -44,6 +45,10 @@ async function renderHome() {
 
     <h2>Racials</h2>
     <div class="cards">${cat('Racial').subs.map(raceCard).join('')}</div>
+
+    <h2>Items</h2>
+    <div class="cards">${(IT || []).filter(c => [2, 4, 0, 7].includes(c.cls)).map(c => `<div class="cc" style="--cc:var(--yellow,#e6db74)"><span class="n">${esc(c.name)}</span><span class="c">${n(c.count)} items</span><span class="go">${c.subs.slice(0, 4).map(s => `<a href="${itemListHash(c.cls, s.sub)}">${esc(s.name)}</a>`).join('')}</span></div>`).join('')}</div>
+    <p class="dim">Every other item type is in the <b>Items</b> menu in the bar. Item pages list stats, armor, and the spells an item casts.</p>
 
     <h2>Try these</h2>
     <div class="cards">${EXAMPLES.map(([id, name, why]) => `<div class="cc" style="--cc:var(--green)"><span class="n">${esc(name)}</span><span class="c">${esc(why)}</span><span class="go"><a href="#spell/${id}">Open</a></span></div>`).join('')}</div>

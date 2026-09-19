@@ -3,7 +3,7 @@ import json, mimetypes, re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import browse, config as C, spells, talents
+from . import browse, config as C, items, spells, talents
 
 
 def _flag(p, name):
@@ -42,7 +42,12 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/meta":
             return self._json(browse.meta())
         if path == "/api/search":
-            return self._json(spells.search(p.get("q", ""), sod))
+            return self._json(spells.search(p.get("q", ""), sod) + [dict(i, kind="item") for i in items.search(p.get("q", ""), sod)])
+        if path == "/api/items":
+            return self._json(items.tree(sod))
+        if path == "/api/items/list":
+            return self._json(items.listing(p.get("cls", ""), p.get("sub", ""), p.get("q", ""), int(p.get("offset", 0)),
+                                            int(p.get("limit", 300)), sod))
         if path == "/api/browse":
             return self._json(browse.tree(sod))
         if path == "/api/browse/list":
@@ -53,6 +58,13 @@ class Handler(BaseHTTPRequestHandler):
         m = re.fullmatch(r"/api/talents/(\d+)", path)
         if m:
             return self._json(talents.tree(m.group(1)))
+        m = re.fullmatch(r"/api/item/(\d+)", path)
+        if m:
+            return self._json(items.item(m.group(1)))
+        m = re.fullmatch(r"/api/itip/(\d+)", path)
+        if m:
+            it = items.item(m.group(1))
+            return self._json(it and items.tip_from(it))
         m = re.fullmatch(r"/api/tip/(\d+)", path)
         if m:
             return self._json(spells.tip(m.group(1)))

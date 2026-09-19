@@ -13,8 +13,7 @@ EXTRA_INDEXES = [
     ("TraitTreeXTraitCurrency", "TraitTreeID"), ("TraitCond", "TraitTreeID"),
     ("TraitDefinitionEffectPoints", "TraitDefinitionID"), ("CurvePoint", "CurveID"),
     ("Item", "SubclassID"), ("ItemEffect", "SpellID"), ("ItemXItemEffect", "ItemEffectID"), ("ItemXItemEffect", "ItemID"),
-    ("ItemSubClass", "ClassID"), ("ItemDamageWand", "ItemLevel"), ("ItemDamageRanged", "ItemLevel"), ("ItemDamageThrown", "ItemLevel"),
-]
+    ("ItemSubClass", "ClassID"), ("ItemClass", "ClassID"), ("RandPropPoints", "ID"), ("ArmorLocation", "ID"), ("ItemArmorTotal", "ItemLevel"),]
 
 
 def build(path):

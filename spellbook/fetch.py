@@ -1,5 +1,5 @@
 """Build-time: download everything the database is built from. Existing files are kept unless force=True."""
-import io, json, urllib.error, urllib.request
+import io, json, time, urllib.error, urllib.request
 
 from . import config as C, flagdefs
 
@@ -14,14 +14,22 @@ def wago_table(table, build, dest, force=False):
     """Download one DB2 table as CSV. Returns False when wago has no such table for that build."""
     if dest.exists() and not force:
         return True
-    try:
-        data = _open(C.WAGO_CSV.format(table=table, build=build)).read()
-    except urllib.error.HTTPError:
-        return False
-    if data.lstrip().startswith(b'{"errors"'):
-        return False
-    dest.write_bytes(data)
-    return True
+    for attempt in range(4):                                  # wago rate-limits bursts: back off and retry on anything but "no such table"
+        try:
+            data = _open(C.WAGO_CSV.format(table=table, build=build)).read()
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return False
+            time.sleep(2 ** attempt * 3)
+            continue
+        except (urllib.error.URLError, TimeoutError):
+            time.sleep(2 ** attempt * 3)
+            continue
+        if data.lstrip().startswith(b'{"errors"'):
+            return False
+        dest.write_bytes(data)
+        return True
+    return False
 
 
 def tables(force=False):
@@ -34,11 +42,12 @@ def tables(force=False):
 
 
 def origin_tables(force=False):
-    """SpellName of the two reference builds (vanilla / SoD-era) -- only the ids are used."""
+    """SpellName and Item of the two reference builds (vanilla / SoD-era) -- only the ids are used."""
     C.ORIGIN_DIR.mkdir(parents=True, exist_ok=True)
     for b in (C.PRE_SOD_BUILD, C.SOD_ERA_BUILD):
-        if not wago_table("SpellName", b, C.ORIGIN_DIR / f"SpellName_{b}.csv", force):
-            raise RuntimeError(f"SpellName for build {b} is not available on wago.tools")
+        for table in ("SpellName", "Item"):
+            if not wago_table(table, b, C.ORIGIN_DIR / f"{table}_{b}.csv", force):
+                raise RuntimeError(f"{table} for build {b} is not available on wago.tools")
 
 
 def icons(force=False):

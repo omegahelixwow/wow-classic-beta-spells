@@ -8,11 +8,13 @@ browser does the small dynamic parts itself (see web/static.js): SoD filtering, 
     api/lists/<slug>.json                                 every row of one class / race / skill list
     api/search.json                                       [id, name, origin, hidden] for every spell
     api/spell/<id>.json  api/tip/<id>.json                spell page and hover tooltip
+    api/items.json  api/item-lists/<cls>-<sub>.json       item navigation, every row of one item type
+    api/item-search.json  api/item/<id>.json  api/itip/<id>.json
 """
 import json, re, shutil, sys, time
 from pathlib import Path
 
-from . import browse, config as C, db, spells, talents
+from . import browse, config as C, db, items, spells, talents
 
 
 def _write(path, obj):
@@ -96,6 +98,22 @@ def export(out, progress=True, site_only=False):
         _write(api / "tip" / f"{sid}.json", spells.tip_from(s))
         if progress and n % 4000 == 0:
             print(f"  spells {n:6,} / {len(ids):,}   {time.time() - t0:5.0f}s")
+
+    # items: navigation (SoD hidden / shown), one file per item type, search index, item pages and tooltips
+    for sod in (0, 1):
+        _write(api / f"items-{sod}.json", items.tree(bool(sod)))
+    for cat in items.tree(True):
+        for s in cat["subs"]:
+            _write(api / "item-lists" / f"{cat['cls']}-{s['sub']}.json", [r[:7] + [items.INV_SHORT.get(r[9], "")] for r in items.list_rows(cat["cls"], s["sub"])])
+    _write(api / "item-search.json", items.search_index())
+    item_ids = [r["ID"] for r in db.q("select ID from ItemSparse where Display_lang != '' order by cast(ID as integer)")]
+    for n, iid in enumerate(item_ids, 1):
+        it = items.item(iid)
+        if it:
+            _write(api / "item" / f"{iid}.json", it)
+            _write(api / "itip" / f"{iid}.json", items.tip_from(it))
+        if progress and n % 5000 == 0:
+            print(f"  items {n:6,} / {len(item_ids):,}   {time.time() - t0:5.0f}s")
     db.bulk(False)
     size = sum(f.stat().st_size for f in out.rglob("*") if f.is_file())
     files = sum(1 for f in out.rglob("*") if f.is_file())

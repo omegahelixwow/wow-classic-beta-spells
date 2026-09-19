@@ -24,7 +24,7 @@ WAGO_CSV = "https://wago.tools/db2/{table}/csv?build={build}"
 LISTFILE_URL = "https://github.com/wowdev/wow-listfile/releases/latest/download/community-listfile.csv"
 TC_RAW = "https://raw.githubusercontent.com/TrinityCore/TrinityCore/master/src/server/game/"
 TC_HEADERS = ["Spells/SpellDefines.h", "Spells/SpellMgr.h", "Spells/Auras/SpellAuraDefines.h",
-              "Miscellaneous/SharedDefines.h"]
+              "Miscellaneous/SharedDefines.h", "Entities/Item/ItemTemplate.h"]
 
 SPELL_TABLES = [
     "Spell", "SpellName", "SpellMisc", "SpellEffect", "SpellCooldowns", "SpellPower", "SpellCategories",
@@ -42,9 +42,8 @@ TALENT_TABLES = [
     "TraitCurrencySource", "TraitTreeXTraitCurrency", "TraitSystem", "Curve", "CurvePoint",
 ]
 ITEM_TABLES = [
-    "Item", "ItemSparse", "ItemSubClass", "ItemEffect", "ItemXItemEffect",         # items, the spells they cast, weapon type names
-    "ItemDamageWand", "ItemDamageRanged", "ItemDamageThrown",                      # damage per second by item level and quality ...
-    "ItemDamageOneHand", "ItemDamageOneHandCaster", "ItemDamageTwoHand", "ItemDamageTwoHandCaster",
+    "Item", "ItemSparse", "ItemClass", "ItemSubClass", "ItemEffect", "ItemXItemEffect",   # items, their types, the spells they cast
+    "RandPropPoints", "ItemArmorTotal", "ItemArmorQuality", "ItemArmorShield", "ArmorLocation",   # stat budgets and armor (verified)
 ]
 TABLES = SPELL_TABLES + TALENT_TABLES + ITEM_TABLES
 

@@ -35,15 +35,16 @@ function go(h) { navSave(); if (location.hash === h) route(); else location.hash
 // Every [data-go] element opens its spell. A click only counts for the innermost one (a rank button inside a tile
 // opens that rank, not the tile's top rank); Enter / Space on a focused tile does the same.
 const touchOnly = () => !!window.matchMedia && matchMedia('(hover: none)').matches;
-const bindGo = () => document.querySelectorAll('[data-go]').forEach(b => {
+const bindGo = () => document.querySelectorAll('[data-go],[data-item]').forEach(b => {
+  const dest = () => b.dataset.item ? '#item/' + b.dataset.item : '#spell/' + b.dataset.go;
   b.onclick = e => {
-    if (e.target.closest('[data-go]') !== b) return;
+    if (e.target.closest('[data-go],[data-item]') !== b) return;
     // no hover on touch screens: the first tap on a ranked tile opens its rank strip, the second opens the spell
     if (touchOnly() && b.classList.contains('ranked') && !b.classList.contains('open')) {
       document.querySelectorAll('.tile.open').forEach(x => x.classList.remove('open'));
       b.classList.add('open'); return;
     }
-    go('#spell/' + b.dataset.go);
+    go(dest());
   };
-  b.onkeydown = e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === b) { e.preventDefault(); go('#spell/' + b.dataset.go); } };
+  b.onkeydown = e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === b) { e.preventDefault(); go(dest()); } };
 });

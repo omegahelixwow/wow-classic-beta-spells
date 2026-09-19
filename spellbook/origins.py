@@ -19,7 +19,18 @@ def _ids(path):
         return {row[0] for row in r}
 
 
+def _origin(ids_here, pre, sod_era):
+    return [(i, "vanilla" if i in pre else "sod" if i in sod_era else "new") for i in ids_here]
+
+
 def build(con):
+    # items: the same three-way split, by comparing item ids across the builds
+    ipre = _ids(C.ORIGIN_DIR / f"Item_{C.PRE_SOD_BUILD}.csv")
+    isod = _ids(C.ORIGIN_DIR / f"Item_{C.SOD_ERA_BUILD}.csv")
+    con.execute("drop table if exists ItemOrigin")
+    con.execute("create table ItemOrigin (ItemID text primary key, Origin text)")
+    con.executemany("insert into ItemOrigin values (?,?)", _origin([r[0] for r in con.execute("select ID from Item")], ipre, isod))
+    con.execute("create index i_iorigin on ItemOrigin(Origin)")
     pre = _ids(C.ORIGIN_DIR / f"SpellName_{C.PRE_SOD_BUILD}.csv")
     sod_era = _ids(C.ORIGIN_DIR / f"SpellName_{C.SOD_ERA_BUILD}.csv")
     rows = []

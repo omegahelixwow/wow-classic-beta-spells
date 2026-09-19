@@ -14,6 +14,10 @@ async function staticApi(path, p) {
   if ((m = path.match(/^spell\/(\d+)$/))) return staticSpell(m[1]);
   if (path === 'search') return staticSearch(p.q || '');
   if (path === 'browse/list') return staticList(p);
+  if (path === 'items') return getJSON(`api/items-${state.sod ? 1 : 0}.json`);
+  if (path === 'items/list') return staticItemList(p);
+  if ((m = path.match(/^item\/(\d+)$/))) return getJSON(`api/item/${m[1]}.json`);
+  if ((m = path.match(/^itip\/(\d+)$/))) return getJSON(`api/itip/${m[1]}.json`);
   return null;
 }
 
@@ -42,6 +46,30 @@ let searchRows = null;
 async function staticSearch(q) {
   q = q.trim();
   if (!q) return [];
+  return (await staticSpellSearch(q)).concat(await staticItemSearch(q));
+}
+let itemSearchRows = null;
+async function staticItemSearch(q) {                                   // [id, name, origin, quality]; up to 25, like items.search
+  if (!itemSearchRows) {
+    const rows = await getJSON('api/item-search.json') || [];
+    itemSearchRows = rows.map(r => ({id: r[0], name: r[1], origin: r[2], quality: r[3], low: r[1].toLowerCase()}));
+  }
+  if (/^\d+$/.test(q)) { const r = itemSearchRows.find(x => x.id === +q); return r ? [{id: r.id, name: r.name, origin: r.origin, quality: r.quality, kind: 'item'}] : []; }
+  const t = q.toLowerCase(), out = [];
+  for (const r of itemSearchRows) {
+    if ((!state.sod && r.origin === 'sod') || !r.low.includes(t)) continue;
+    out.push({id: r.id, name: r.name, origin: r.origin, quality: r.quality, kind: 'item'});
+    if (out.length >= 25) break;
+  }
+  return out;
+}
+async function staticItemList(p) {
+  const rows = await getJSON(`api/item-lists/${p.cls}-${p.sub}.json`) || [];
+  const t = String(p.q || '').toLowerCase(), off = +(p.offset || 0), lim = +(p.limit || 300);
+  const hit = rows.filter(r => (state.sod || r[5] !== 'sod') && (!t || r[1].toLowerCase().includes(t) || String(r[0]) === String(p.q)));
+  return {total: hit.length, offset: off, items: hit.slice(off, off + lim).map(r => ({id: r[0], name: r[1], quality: r[2], level: r[3], reqLevel: r[4], origin: r[5], icon: r[6], slot: r[7]}))};
+}
+async function staticSpellSearch(q) {
   if (!searchRows) {
     const rows = await getJSON('api/search.json') || [];
     searchRows = rows.map(r => ({id: r[0], name: r[1], origin: r[2], hidden: r[3], low: r[1].toLowerCase()}));

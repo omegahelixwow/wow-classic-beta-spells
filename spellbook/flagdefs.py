@@ -12,7 +12,9 @@ WANT = {
     "AuraType": ("SpellAuraDefines.h", "SPELL_AURA_"), "SpellEffects": ("SharedDefines.h", "SPELL_EFFECT_"),
     "Targets": ("SharedDefines.h", "TARGET_"), "Mechanics": ("SharedDefines.h", "MECHANIC_"),
     "DispelType": ("SharedDefines.h", "DISPEL_"),
-    "SpellModOp": ("SpellDefines.h", ""),               # what a class-mask modifier aura changes (cast time, cooldown, cost ...)
+    "SpellModOp": ("SpellDefines.h", ""),
+    "ItemModType": ("ItemTemplate.h", "ITEM_MOD_"), "InventoryType": ("ItemTemplate.h", "INVTYPE_"),
+    "ItemBondingType": ("ItemTemplate.h", "BIND_"),                # item stat type / slot / binding names               # what a class-mask modifier aura changes (cast time, cooldown, cost ...)
 }
 LINE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(0x[0-9A-Fa-f]+|\d+)\s*,?\s*(?://\s*(.*))?$")
 

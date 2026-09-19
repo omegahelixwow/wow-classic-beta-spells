@@ -1,18 +1,21 @@
 /* Top bar: class / racial buttons, the "Unknown" menu, search, the SoD switch. */
-let NAV = null, TI = null;                                   // navigation counts, talent-tree index
+let NAV = null, TI = null, IT = null;                        // navigation counts, talent-tree index, item types
 const talentTree = cls => TI && TI.find(t => t.class === cls);
 
 async function loadNav() {
   if (NAV) return;
-  const [nav, ti] = await Promise.all([api('browse'), api('talents')]);
-  NAV = nav; TI = ti;
+  const [nav, ti, it] = await Promise.all([api('browse'), api('talents'), api('items')]);
+  NAV = nav; TI = ti; IT = it;
   const cat = c => NAV.find(x => x.cat === c) || {subs: [], count: 0};
   const btn = (c, s) => `<button class="nb" data-cat="${esc(c)}" data-sub="${esc(s.sub)}" title="${s.count.toLocaleString()} spells">${esc(s.sub)}</button>`;
   const item = (c, s, label) => `<button class="it" data-cat="${esc(c)}" data-sub="${esc(s.sub)}">${esc(label || s.sub)}<small>${s.count.toLocaleString()}</small></button>`;
   const skills = cat('Skills'), test = cat('Test / Deprecated'), npc = cat('NPC / Unknown');
+  const itemMenu = (IT || []).map(c => `<details><summary>${esc(c.name)} <small>${c.count.toLocaleString()}</small></summary><div class="in">${c.subs.map(s =>
+    `<button class="it" data-icls="${c.cls}" data-isub="${s.sub}">${esc(s.name)}<small>${s.count.toLocaleString()}</small></button>`).join('')}</div></details>`).join('');
   $('#nav').innerHTML =
     `<div class="navrows"><div class="grp2"><span class="lab">Classes</span>${cat('Class').subs.map(s => btn('Class', s)).join('')}</div>` +
     `<div class="grp2"><span class="lab">Racials</span>${cat('Racial').subs.map(s => btn('Racial', s)).join('')}</div></div>` +
+    `<div class="unk"><button class="nb" id="items-btn">Items ▾</button><div class="menu" id="items-menu" hidden>${itemMenu}</div></div>` +
     `<div class="unk"><button class="nb" id="unk-btn">Unknown ▾</button><div class="menu" id="unk-menu" hidden>` +
       (skills.subs.length ? `<details><summary>Skills &amp; professions <small>${skills.count.toLocaleString()}</small></summary><div class="in">${skills.subs.map(s => item('Skills', s)).join('')}</div></details>` : '') +
       test.subs.map(s => item('Test / Deprecated', s, 'Test / deprecated')).join('') +
@@ -23,15 +26,23 @@ async function loadNav() {
 function navMark(cat, sub) {
   document.querySelectorAll('#nav [data-cat]').forEach(x => x.classList.toggle('on', x.dataset.cat === cat && x.dataset.sub === sub));
   const u = $('#unk-btn'); if (u) u.classList.toggle('on', !!document.querySelector('#unk-menu [data-cat].on'));
+  const ib = $('#items-btn'); if (ib) ib.classList.toggle('on', !!document.querySelector('#items-menu [data-icls].on'));
+}
+function itemNavMark(cls, sub) {
+  document.querySelectorAll('#items-menu [data-icls]').forEach(x => x.classList.toggle('on', x.dataset.icls === String(cls) && x.dataset.isub === String(sub)));
+  const ib = $('#items-btn'); if (ib) ib.classList.toggle('on', cls !== undefined);
 }
 
 $('#nav').addEventListener('click', e => {
-  if (e.target.closest('#unk-btn')) { const m = $('#unk-menu'); m.hidden = !m.hidden; return; }
+  if (e.target.closest('#unk-btn')) { const m = $('#unk-menu'); m.hidden = !m.hidden; $('#items-menu').hidden = true; return; }
+  if (e.target.closest('#items-btn')) { const m = $('#items-menu'); m.hidden = !m.hidden; $('#unk-menu').hidden = true; return; }
+  const ib = e.target.closest('[data-icls]');
+  if (ib) { $('#items-menu').hidden = true; go(itemListHash(ib.dataset.icls, ib.dataset.isub)); return; }
   const b = e.target.closest('[data-cat]'); if (!b) return;
   $('#unk-menu').hidden = true; go(listHash(b.dataset.cat, b.dataset.sub));
 });
 document.addEventListener('click', e => {                      // click-away closes the dropdowns
-  if (!e.target.closest('.unk') && $('#unk-menu')) $('#unk-menu').hidden = true;
+  if (!e.target.closest('.unk') && $('#unk-menu')) { $('#unk-menu').hidden = true; $('#items-menu').hidden = true; }
   if (!e.target.closest('.srch')) $('#res').hidden = true;
 });
 
@@ -45,9 +56,10 @@ document.addEventListener('click', e => {
 
 // ---- search ----
 let searchTimer;
+const resHash = b => (b.dataset.kind === 'item' ? '#item/' : '#spell/') + b.dataset.id;
 async function search(q, quiet) {
   const r = q.trim() ? await api('search', {q}) : [];
-  $('#res').innerHTML = r.map(s => `<button data-id="${s.id}">${esc(s.name)} ${sodBadge(s.origin)}<small>${s.id}</small></button>`).join('')
+  $('#res').innerHTML = r.map(s => `<button data-id="${s.id}" data-kind="${s.kind || 'spell'}">${s.kind === 'item' ? `<span style="color:${QUALITY_COLOR[QUALITY[s.quality]] || 'inherit'}">${esc(s.name)}</span> <span class="badge">item</span>` : esc(s.name)} ${sodBadge(s.origin)}<small>${s.id}</small></button>`).join('')
     || '<small class="dim" style="padding:6px 8px;display:block">No matches</small>';
   $('#res').hidden = quiet || !q.trim();
   return r;
@@ -56,9 +68,9 @@ $('#q').oninput = e => { clearTimeout(searchTimer); searchTimer = setTimeout(() 
 $('#q').onfocus = e => { if (e.target.value.trim() && $('#res').children.length) $('#res').hidden = false; };
 $('#q').onkeydown = e => {
   if (e.key === 'Escape') $('#res').hidden = true;
-  if (e.key === 'Enter') { const b = $('#res button'); if (b) { $('#res').hidden = true; go('#spell/' + b.dataset.id); } }
+  if (e.key === 'Enter') { const b = $('#res button'); if (b) { $('#res').hidden = true; go(resHash(b)); } }
 };
-$('#res').onclick = e => { const b = e.target.closest('button'); if (b) { $('#res').hidden = true; go('#spell/' + b.dataset.id); } };
+$('#res').onclick = e => { const b = e.target.closest('button'); if (b) { $('#res').hidden = true; go(resHash(b)); } };
 
 // ---- SoD switch + build info ----
 $('#sod').checked = state.sod;

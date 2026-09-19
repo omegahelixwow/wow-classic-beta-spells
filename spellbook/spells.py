@@ -305,7 +305,7 @@ def spell(sid, show_sod=False):
         "level": first("SpellLevels", "SpellID", sid).get("SpellLevel"),
         "proc": proc, "effects": _effects(sid, effects, int(num(dur.get("Duration")))), "tables": _raw_tables(sid),
         "affects": affects.affected(sid),
-        "weapons": items.weapon_reference(effects, rows("SpellEquippedItems", "SpellID", sid), bool(int(misc.get("Attributes_0") or 0) & 2)),
+        "weapons": items.weapon_types(effects, rows("SpellEquippedItems", "SpellID", sid), bool(int(misc.get("Attributes_0") or 0) & 2)),
         "itemsUsing": items.used_by_items(sid),
         "triggers": links.triggers(sid), "triggeredBy": links.triggered_by(sid), "usedBy": links.used_by(sid),
     }
