@@ -50,6 +50,10 @@ def fold(rows, offset=0, limit=300):
             item["levels"] = [min(t[1] for t in ranked), max(t[1] for t in ranked)]
             item["rankList"] = [{"id": int(t[2]["id"]), "rank": t[0], "level": t[1], "origin": t[2]["origin"]} for t in ranked]
         items.append(item)
+    # A ranked ability often has a same-named ranked family of helper spells linked to it (the effect spells that carry the
+    # numbers). Listing both shows the ability twice, so the linked copy is dropped when a direct one with that name exists.
+    direct_ranked = {it["name"] for it in items if it["ranks"] and not it["linked"]}
+    items = [it for it in items if not (it["linked"] and it["ranks"] and it["name"] in direct_ranked)]
     return {"total": len(items), "spells": len({r["id"] for r in rows}), "offset": offset, "items": items[offset:offset + limit]}
 
 

@@ -31,6 +31,26 @@ def racial_names(mask, skill, races):
     return [{"Dwarven": "Dwarf"}.get(n, n) or "Unknown race"]
 
 
+def legacy_talents(con, names):
+    """The classic-style Talent table, one entry per talent: {ranks, classes, tab, hide}. The table is the old design, so
+    it is only trusted for passives, and for anything the new trees also contain. An ACTIVE ability the beta's tree does
+    not list (Consecration, Aimed Shot, Blessing of Kings ...) is an ordinary ability here (hide=False)."""
+    tab = {r[0]: (int(r[1]), r[2]) for r in con.execute("select ID, ClassMask, Name_lang from TalentTab")}
+    tree_names = {cls: {n for _, n in entries} for cls, entries in talents.entries_by_class().items()}
+    passive = {sp for sp, a0 in con.execute("select SpellID, Attributes_0 from SpellMisc") if int(a0) & 0x40}
+    out = []
+    for row in con.execute("select TabID, SpellRank_0, SpellRank_1, SpellRank_2, SpellRank_3, SpellRank_4, "
+                           "SpellRank_5, SpellRank_6, SpellRank_7, SpellRank_8 from Talent"):
+        ranks = [s for s in row[1:] if s not in ("", "0") and s in names]
+        if not ranks:
+            continue
+        mask, tab_name = tab.get(row[0], (0, ""))
+        classes = class_names(mask)
+        in_tree = any(names[ranks[0]] in tree_names.get(c, ()) for c in classes)
+        out.append({"ranks": ranks, "classes": classes, "tab": tab_name, "hide": ranks[0] in passive or in_tree})
+    return out
+
+
 def hidden_spells(con, names, sla, skill_name, line_class):
     """{reason: set(spell ids)} of spells that get no place in the lists."""
     # 1. engraving / runes
@@ -47,10 +67,10 @@ def hidden_spells(con, names, sla, skill_name, line_class):
         mask = int(cm) if int(cm) > 0 else line_class.get(sl, 0)
         learned_by[sp].update(class_names(mask))
     talent = set()
-    # 2a. classic-style Talent table: every rank spell of every talent (these are not nodes of the new trees)
-    for row in con.execute("select SpellID, SpellRank_0, SpellRank_1, SpellRank_2, SpellRank_3, SpellRank_4, "
-                           "SpellRank_5, SpellRank_6, SpellRank_7, SpellRank_8 from Talent"):
-        talent.update(s for s in row if s not in ("", "0") and s in names)
+    # 2a. the classic-style Talent table (see legacy_talents)
+    for t in legacy_talents(con, names):
+        if t["hide"]:
+            talent.update(t["ranks"])
     # 2b. the new retail-model trees
     for cls, entries in talents.entries_by_class().items():
         for sid, name in entries:
@@ -106,6 +126,14 @@ def build(con):
                 out[sp].add(("Class", c, 0, line, ""))
         else:
             out[sp].add(("Skills", line, 0, "", ""))
+
+    # a legacy talent that is an ordinary ability here but has no skill-line row (Sanctity Aura) still belongs to its class
+    for t in legacy_talents(con, names):
+        if not t["hide"]:
+            for sp in t["ranks"]:
+                if sp not in out and sp not in excluded:
+                    for c in t["classes"]:
+                        out[sp].add(("Class", c, 0, t["tab"], ""))
 
     # ---- links: an edge (a, b) means spell a triggers / mentions spell b ----
     edges = set()

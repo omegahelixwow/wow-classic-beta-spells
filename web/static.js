@@ -81,7 +81,10 @@ function foldRows(rows, offset, limit) {
     }
     items.push(item);
   }
-  return {total: items.length, spells: new Set(rows.map(r => r.id)).size, offset, items: items.slice(offset, offset + limit)};
+  // a linked ranked family that duplicates a direct ranked one (same name) is a helper-spell copy: drop it
+  const directRanked = new Set(items.filter(i => i.ranks && !i.linked).map(i => i.name));
+  const kept = items.filter(i => !(i.linked && i.ranks && directRanked.has(i.name)));
+  return {total: kept.length, spells: new Set(rows.map(r => r.id)).size, offset, items: kept.slice(offset, offset + limit)};
 }
 
 async function staticList(p) {

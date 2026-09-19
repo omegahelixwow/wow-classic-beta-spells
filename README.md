@@ -78,7 +78,8 @@ of the beta's own trees, so they stay in place and are marked with a purple dot 
 * **Linked** spells (no skill line of their own) inherit the home of the spell that triggers / mentions them.
 * **Hidden from every list** (still findable by id; search also skips engraving / form-only / orphans, but not talents):
   engraving and rune spells; talents (they live in the Talents tab: every rank in the classic `Talent` table, every spell a
-  retail-model class tree grants, plus same-named ranks);
+  retail-model class tree grants, plus same-named ranks). The old `Talent` table is only trusted for passives and for talents the
+  new trees also contain: an active ability the beta's trees dropped (Consecration, Aimed Shot, Blessing of Kings ...) is a normal ability;
   spells that exist only inside Warlock's Metamorphosis form (found through the form spell's action-bar-override effects);
   and anything reachable only through one of those.
 
