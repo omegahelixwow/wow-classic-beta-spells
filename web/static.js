@@ -18,13 +18,21 @@ async function staticApi(path, p) {
 }
 
 // The exported spell pages include SoD ranks / related spells; hide them unless the switch is on (same rule as spells.py).
+// A SoD rank still fills a rank number nothing else has (Frostfire Bolt rank 1), so an ability is not shown starting at rank 2.
+function visibleRanks(ranks, me) {
+  if (state.sod || me === 'sod') return ranks;
+  const kept = ranks.filter(r => r.origin !== 'sod'), taken = new Set(kept.map(r => r.rank));
+  for (const r of ranks) if (r.origin === 'sod' && !taken.has(r.rank)) { taken.add(r.rank); kept.push(r); }
+  return kept.sort((a, b) => a.rank - b.rank || a.id - b.id);
+}
 async function staticSpell(id) {
   const s0 = await getJSON(`api/spell/${id}.json`);
   if (!s0) return null;
   const s = {...s0};
   if (!state.sod) {
     s.related = s.related.filter(r => r.origin !== 'sod');
-    if (s.origin !== 'sod') { s.ranks = s.ranks.filter(r => r.origin !== 'sod'); if (s.ranks.length < 2) s.ranks = []; }
+    s.ranks = visibleRanks(s.ranks, s.origin);
+    if (s.ranks.length < 2) s.ranks = [];
   }
   return s;
 }
@@ -87,8 +95,29 @@ function foldRows(rows, offset, limit) {
   return {total: kept.length, spells: new Set(rows.map(r => r.id)).size, offset, items: kept.slice(offset, offset + limit)};
 }
 
+// port of browse.with_sod_ranks: with SoD hidden, a SoD spell still fills a missing rank number of a visible ability
+const famKey = r => {
+  const m = RANK_RE.exec(r.subtext || '');
+  if (!m) return null;
+  const linked = !!r.linked;
+  return JSON.stringify([r.name, linked, linked ? r.via.replace(VIA_ID, '') : r.via]);
+};
+const rankNum = r => +RANK_RE.exec(r.subtext)[1];
+function withSodRanks(all, show) {
+  if (show) return all;
+  const vis = r => r.origin !== 'sod' && r.via_origin !== 'sod', taken = new Map();
+  for (const r of all) if (vis(r) && famKey(r)) { const k = famKey(r); if (!taken.has(k)) taken.set(k, new Set()); taken.get(k).add(rankNum(r)); }
+  return all.filter(r => {
+    if (vis(r)) return true;
+    const k = famKey(r);
+    if (r.origin !== 'sod' || !k || !taken.has(k) || taken.get(k).has(rankNum(r))) return false;
+    taken.get(k).add(rankNum(r));
+    return true;
+  });
+}
+
 async function staticList(p) {
-  let rows = (await listRows(p.cat, p.sub)).filter(r => state.sod || (r.origin !== 'sod' && r.via_origin !== 'sod'));
+  let rows = await listRows(p.cat, p.sub);
   if (p.q) { const t = String(p.q).toLowerCase(); rows = rows.filter(r => (r.name || '').toLowerCase().includes(t) || String(r.id) === String(p.q)); }
-  return foldRows(rows, +(p.offset || 0), +(p.limit || 300));
+  return foldRows(withSodRanks(rows, state.sod), +(p.offset || 0), +(p.limit || 300));
 }

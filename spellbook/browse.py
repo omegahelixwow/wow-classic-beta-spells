@@ -57,17 +57,49 @@ def fold(rows, offset=0, limit=300):
     return {"total": len(items), "spells": len({r["id"] for r in rows}), "offset": offset, "items": items[offset:offset + limit]}
 
 
+def _rank(r):
+    m = RANK.match(r["subtext"] or "")
+    return int(m.group(1)) if m else None
+
+
+def _family(r):
+    """Key shared by the ranks of one ability (None for a spell without "Rank N"); same key as fold() groups by."""
+    if _rank(r) is None:
+        return None
+    linked = bool(int(r["linked"]))
+    return (r["name"], linked, VIA_ID.sub("", r["via"]) if linked else r["via"])
+
+
+def with_sod_ranks(all_rows, show_sod):
+    """The rows to list. With SoD hidden, a SoD spell still fills a missing rank of an ability whose other ranks are shown
+    (Frostfire Bolt: rank 1 is a SoD spell, ranks 2-3 are new in this beta) -- but never duplicates a rank that exists."""
+    if show_sod:
+        return all_rows
+    taken = {}
+    for r in all_rows:
+        if visible(r, False) and _family(r):
+            taken.setdefault(_family(r), set()).add(_rank(r))
+    out = []
+    for r in all_rows:
+        if visible(r, False):
+            out.append(r)
+        elif r["origin"] == "sod" and _family(r) in taken and _rank(r) not in taken[_family(r)]:
+            taken[_family(r)].add(_rank(r))
+            out.append(r)
+    return out
+
+
 def visible(r, show_sod):
     """A row shows when SoD is on, or when neither the spell nor the spell it was linked through is SoD."""
     return show_sod or (r["origin"] != "sod" and r["via_origin"] != "sod")
 
 
 def listing(cat, sub, text="", offset=0, limit=300, show_sod=False):
-    rows = [r for r in raw_rows(cat, sub) if visible(r, show_sod)]
+    rows = raw_rows(cat, sub)
     if text:
         t = text.lower()
         rows = [r for r in rows if t in (r["name"] or "").lower() or r["id"] == text]
-    return fold(rows, offset, limit)
+    return fold(with_sod_ranks(rows, show_sod), offset, limit)
 
 
 def tree(show_sod=False):

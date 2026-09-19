@@ -76,12 +76,23 @@ of the beta's own trees, so they stay in place and are marked with a purple dot 
 * **Test / Deprecated** and **NPC / Unknown** — the rest (behind the *Unknown* menu). "NPC / Unknown" is a leftover bucket:
   the client tables have no field saying a spell belongs to an NPC.
 * **Linked** spells (no skill line of their own) inherit the home of the spell that triggers / mentions them.
-* **Hidden from every list** (still findable by id; search also skips engraving / form-only / orphans, but not talents):
-  engraving and rune spells; talents (they live in the Talents tab: every rank in the classic `Talent` table, every spell a
-  retail-model class tree grants, plus same-named ranks). The old `Talent` table is only trusted for passives and for talents the
-  new trees also contain: an active ability the beta's trees dropped (Consecration, Aimed Shot, Blessing of Kings ...) is a normal ability;
-  spells that exist only inside Warlock's Metamorphosis form (found through the form spell's action-bar-override effects);
-  and anything reachable only through one of those.
+* **Mounts and riding** are not class spells. They are listed under Skills -> Mounts / Riding, except the four mounts a class trains
+  itself (Summon Warhorse / Charger for Paladins, Summon Felsteed / Dreadsteed for Warlocks), which stay in that class.
+  (A skill line whose rows name a single class lets its class-less rows inherit it -- but not the Mounts / Riding lines, whose
+  three Paladin rows would otherwise claim every mount.)
+* **Hidden from every list** (still findable by id; search also skips engraving / form-only / orphan / helper spells, but not talents):
+  * engraving and rune spells;
+  * **passive** talents (they live in the Talents tab): passives in the retail-model class trees or the classic `Talent` table, same-named
+    ranks, and ranked passives in a class skill line ("Improved Flash of Light"). **Active** talents (Riptide, Stormstrike, Pyroblast,
+    Consecration ...) are abilities you cast, so they are listed; the spell's own PASSIVE flag decides, not the talent table;
+  * helper / effect spells: learned automatically (`SkillLineAbility.AcquireMethod` 3) with no cost, cooldown or global cooldown
+    (Judgement of Light, the extra Flash of Light / Holy Light spells, "Hellfire Effect", "Jeff Dummy"). Real abilities that share
+    that method (Execute, Readiness, Feral Charge (Bear)) have a cost or cooldown and stay;
+  * spells that exist only inside Warlock's Metamorphosis form (found through the form spell's action-bar-override effects);
+  * anything reachable only through one of those.
+* **Ranks folded into one tile.** With SoD hidden, a SoD spell still fills a rank number that nothing else has (Frostfire Bolt rank 1 is a
+  SoD spell, ranks 2-3 are new in this beta), so an ability never starts at rank 2 -- but a SoD rank never duplicates an existing one.
+  The Python (`browse.with_sod_ranks`) and browser (`static.js`) versions are checked against each other.
 
 ## Talent trees (`talents.py`)
 Retail `Trait*` model: nodes carry positions and groups; edges are prerequisites; conditions gate rows ("N points in this

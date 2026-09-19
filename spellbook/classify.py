@@ -20,6 +20,10 @@ from . import talents
 from .db import class_names
 
 FORM_METAMORPHOSIS = 22           # SpellShapeshiftForm id
+MOUNT_LINES = {"Mounts", "Riding"}          # skill lines of mounts / riding: not a class's own, even when a few rows name a class
+# the only mounts a class trains itself (matched by name; the beta / SoD copies share the names)
+CLASS_MOUNTS = {"Summon Warhorse": "Paladin", "Summon Charger": "Paladin", "Summon Felsteed": "Warlock", "Summon Dreadsteed": "Warlock"}
+RANK_TEXT = re.compile(r"^Rank \d+$")
 TEST_NAME = re.compile(r"\((TEST|OLD|DND|NYI|PH|DEPRECATED|UNUSED|DEBUG)\)|^zz|^DEPRECATED|\bTEST\b|^OLD\b|\bDND\b", re.I)
 
 
@@ -32,11 +36,10 @@ def racial_names(mask, skill, races):
 
 
 def legacy_talents(con, names):
-    """The classic-style Talent table, one entry per talent: {ranks, classes, tab, hide}. The table is the old design, so
-    it is only trusted for passives, and for anything the new trees also contain. An ACTIVE ability the beta's tree does
-    not list (Consecration, Aimed Shot, Blessing of Kings ...) is an ordinary ability here (hide=False)."""
+    """The classic-style Talent table, one entry per talent: {ranks, classes, tab, hide}. Only PASSIVE talents are hidden from
+    the lists (they live in the Talents tab). An ACTIVE talent -- one you cast, like Riptide, or Consecration and Aimed Shot,
+    which the beta's trees no longer list -- is an ordinary ability and stays listed (hide=False)."""
     tab = {r[0]: (int(r[1]), r[2]) for r in con.execute("select ID, ClassMask, Name_lang from TalentTab")}
-    tree_names = {cls: {n for _, n in entries} for cls, entries in talents.entries_by_class().items()}
     passive = {sp for sp, a0 in con.execute("select SpellID, Attributes_0 from SpellMisc") if int(a0) & 0x40}
     out = []
     for row in con.execute("select TabID, SpellRank_0, SpellRank_1, SpellRank_2, SpellRank_3, SpellRank_4, "
@@ -45,9 +48,7 @@ def legacy_talents(con, names):
         if not ranks:
             continue
         mask, tab_name = tab.get(row[0], (0, ""))
-        classes = class_names(mask)
-        in_tree = any(names[ranks[0]] in tree_names.get(c, ()) for c in classes)
-        out.append({"ranks": ranks, "classes": classes, "tab": tab_name, "hide": ranks[0] in passive or in_tree})
+        out.append({"ranks": ranks, "classes": class_names(mask), "tab": tab_name, "hide": ranks[0] in passive})
     return out
 
 
@@ -66,16 +67,19 @@ def hidden_spells(con, names, sla, skill_name, line_class):
             continue
         mask = int(cm) if int(cm) > 0 else line_class.get(sl, 0)
         learned_by[sp].update(class_names(mask))
+    passive = {sp for sp, a0 in con.execute("select SpellID, Attributes_0 from SpellMisc") if int(a0) & 0x40}
     talent = set()
     # 2a. the classic-style Talent table (see legacy_talents)
     for t in legacy_talents(con, names):
         if t["hide"]:
             talent.update(t["ranks"])
     # 2b. the new retail-model trees
+    #     Only passive entries are hidden; an active one (Riptide, Stormstrike ...) is an ability you cast, so it is listed.
     for cls, entries in talents.entries_by_class().items():
         for sid, name in entries:
-            talent.add(sid)
-            talent.update(s for s in by_name.get(name, ()) if cls in learned_by.get(s, ()))
+            if sid in passive:
+                talent.add(sid)
+                talent.update(s for s in by_name.get(name, ()) if cls in learned_by.get(s, ()) and s in passive)
 
     # 3. spells that exist only inside Warlock's Metamorphosis form. The form spell (aura SHAPESHIFT) carries
     #    OVERRIDE_ACTIONBAR_SPELLS effects (aura 332): while transformed, MiscValue's spell is replaced by BasePoints'
@@ -93,19 +97,41 @@ def hidden_spells(con, names, sla, skill_name, line_class):
         if int(m0) & (1 << (FORM_METAMORPHOSIS - 1)):
             form_only.add(sp)
     form_only = (form_only & set(names)) - form_spells
-    return {"engraving": engraving, "talent": talent, "form-only": form_only}
+    # 4. talent-style passives the talent tables do not list: a ranked passive ("Improved Flash of Light", "Improved Pummel")
+    #    in a class skill line is a talent's rank. Pet training lines are left alone.
+    subtext = {r[0]: r[1] or "" for r in con.execute("select ID, NameSubtext_lang from Spell")}
+    lines_of = collections.defaultdict(set)
+    for sp, sl, *_ in sla:
+        lines_of[sp].add(skill_name.get(sl, ""))
+    for sp in learned_by:
+        if sp in passive and RANK_TEXT.match(subtext.get(sp, "")) and \
+                not any(l.startswith("Pet") or l == "Beast Training" for l in lines_of[sp]):
+            talent.add(sp)
+
+    # 5. helper / effect spells: learned "automatically" (SkillLineAbility.AcquireMethod 3) and with no cost, no cooldown
+    #    and no global cooldown -- Judgement of Light, the extra Flash of Light / Holy Light spells, "Hellfire Effect" ...
+    #    A real ability has a cost, a cooldown or a GCD (Execute, Readiness, Feral Charge (Bear) are method 3 too, but real).
+    acquire = collections.defaultdict(set)
+    for sp, _sl, _cm, _rm, am in sla:
+        acquire[sp].add(am)
+    real = {r[0] for r in con.execute("select SpellID from SpellPower where cast(ManaCost as real) > 0 or cast(PowerCostPct as real) > 0")}
+    real |= {r[0] for r in con.execute("select SpellID from SpellCooldowns where cast(RecoveryTime as integer) > 0 "
+                                       "or cast(CategoryRecoveryTime as integer) > 0 or cast(StartRecoveryTime as integer) > 0")}
+    helper = {sp for sp, ams in acquire.items() if ams == {"3"} and sp in learned_by and sp not in real}
+
+    return {"engraving": engraving, "talent": talent, "form-only": form_only, "helper": helper}
 
 
 def build(con):
     names = {r[0]: r[1] for r in con.execute("select ID, Name_lang from SpellName")}
     skill_name = {r[0]: r[1] for r in con.execute("select ID, DisplayName_lang from SkillLine")}
     races = {int(r[0]): r[1] for r in con.execute("select ID, Name_lang from ChrRaces")}
-    sla = con.execute("select Spell, SkillLine, ClassMask, RaceMasks_0 from SkillLineAbility").fetchall()
+    sla = con.execute("select Spell, SkillLine, ClassMask, RaceMasks_0, AcquireMethod from SkillLineAbility").fetchall()
 
     # a skill line whose rows all name the same single class lets its ClassMask=0 rows inherit that class
     masks = collections.defaultdict(set)
-    for sp, sl, cm, _ in sla:
-        if int(cm) > 0 and "acial" not in skill_name.get(sl, ""):
+    for sp, sl, cm, *_ in sla:
+        if int(cm) > 0 and "acial" not in skill_name.get(sl, "") and skill_name.get(sl) not in MOUNT_LINES:
             masks[sl].add(int(cm))
     line_class = {sl: next(iter(m)) for sl, m in masks.items() if len(m) == 1}
 
@@ -114,11 +140,14 @@ def build(con):
 
     # ---- direct homes, from the skill line each spell is learned through ----
     out = collections.defaultdict(set)                                   # spell -> {(cat, sub, linked, via, via_id)}
-    for sp, sl, cm, rm in sla:
+    for sp, sl, cm, rm, _am in sla:
         if sp in excluded:
             continue
         line, cm = skill_name.get(sl, f"Skill {sl}"), int(cm)
-        if "acial" in line:
+        if line in MOUNT_LINES:                                  # mounts and riding are not class spells ...
+            owner = CLASS_MOUNTS.get(names.get(sp))              # ... except the two mounts Paladins and Warlocks train
+            out[sp].add(("Class", owner, 0, line, "") if owner else ("Skills", line, 0, "", ""))
+        elif "acial" in line:
             for r in racial_names(int(rm or 0), line, races):
                 out[sp].add(("Racial", r, 0, "", ""))
         elif cm > 0 or sl in line_class:

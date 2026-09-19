@@ -15,7 +15,7 @@ ORIGIN_NOTE = {
     "sod": "Added by Season of Discovery (first appears in the SoD-era client).",
     "new": "Introduced by this beta; not in any Classic Era client.",
 }
-SEARCH_HIDDEN = ("engraving", "form-only", "orphan")          # hidden reasons that search also skips (talents stay searchable)
+SEARCH_HIDDEN = ("engraving", "form-only", "orphan", "helper")          # hidden reasons that search also skips (talents stay searchable)
 
 
 RANK_RE = re.compile(r"^Rank (\d+)$")
@@ -45,8 +45,17 @@ def ranks(sid, show_sod=False):
         cands = [c for c in cands if home_of.get(c["id"], set()) & homes]
     me = origin_of(sid)
     out = [{"id": int(c["id"]), "rank": int(RANK_RE.match(c["sub"]).group(1)), "level": int(c["level"] or 0), "origin": c["origin"],
-            "current": c["id"] == sid} for c in cands if show_sod or me == "sod" or c["origin"] != "sod"]
+            "current": c["id"] == sid} for c in cands]
     out.sort(key=lambda r: (r["rank"], r["id"]))
+    if not show_sod and me != "sod":
+        # with SoD hidden a SoD spell still fills a rank number that no other spell has (Frostfire Bolt rank 1)
+        kept, taken = [r for r in out if r["origin"] != "sod"], set()
+        taken = {r["rank"] for r in kept}
+        for r in out:
+            if r["origin"] == "sod" and r["rank"] not in taken:
+                taken.add(r["rank"])
+                kept.append(r)
+        out = sorted(kept, key=lambda r: (r["rank"], r["id"]))
     return out if len(out) > 1 else []
 
 
