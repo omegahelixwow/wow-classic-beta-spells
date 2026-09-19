@@ -72,7 +72,10 @@ const itemLink = (id, name, q) => `<a class="ext" style="color:${QUALITY_COLOR[q
 function weaponNote(e, s) {
   if (!e.weaponDamage) return '';
   const kinds = (s.weapons || []).map(w => w.weapon.toLowerCase());
-  return `<div class="sc">Scales with: <b>the damage of the ${kinds.length ? kinds.join(' / ') + ' you have equipped' : 'weapon you use'}</b> · its item level and quality set its damage per second, which is multiplied by its speed. No spell-power or attack-power coefficient.</div>`;
+  // Observed in play: a wand also gets a plain base damage stat (spell power / spell damage) added on top. The spell data has no
+  // coefficient for it, because the game applies that stat by its own rules, so it cannot be read from these tables.
+  const stat = kinds.includes('wand') ? ` In game a base damage stat such as <b>spell power</b> is added on top of that (observed in play; nothing special to wands, and it is not visible in the spell data).` : ` The spell data has no spell-power or attack-power coefficient.`;
+  return `<div class="sc">Scales with: <b>the damage of the ${kinds.length ? kinds.join(' / ') + ' you have equipped' : 'weapon you use'}</b> · its item level and quality set its damage per second, which is multiplied by its speed.${stat}</div>`;
 }
 /** An effect that applies an item enchantment (imbue, poison, weapon enchant): the enchantment and what it casts. */
 function enchantNote(e) {

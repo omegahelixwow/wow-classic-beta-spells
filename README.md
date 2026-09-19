@@ -130,6 +130,8 @@ The item tables (`Item`, `ItemSparse`, `ItemEffect`, `ItemXItemEffect`, `ItemSub
   crossbow for a ranged-slot spell) with its damage: `ItemDamage<Type>[item level][quality]` gives damage per second, times the weapon's
   speed, spread by its variance. Test and monster items are filtered out. The formula follows TrinityCore's `GetDPS`; it produces plausible
   classic numbers but has not been checked against in-game tooltips.
+  The spell data carries no coefficient for a wand, but in game a base damage stat such as spell power is added on top (reported from play;
+  the game applies it by its own rules, so it is not in the tables). That also makes flat spell-damage auras (Adaptation's +11) ordinary contributors.
 * **Items that use this spell** -- items with an effect that casts it (use / equip / chance on hit / teach).
 * **Enchantments.** A spell that applies an item enchantment (poisons, imbues, weapon enchants; effect types 53, 54, 92, 156 and this build's
   360) shows the enchantment, and the spells it casts become children in the trigger links: Scroll of Imbue Quickening -> Imbue Quickening ->
