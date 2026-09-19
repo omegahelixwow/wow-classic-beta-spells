@@ -76,6 +76,8 @@ of the beta's own trees, so they stay in place and are marked with a purple dot 
 * **Test / Deprecated** and **NPC / Unknown** — the rest (behind the *Unknown* menu). "NPC / Unknown" is a leftover bucket:
   the client tables have no field saying a spell belongs to an NPC.
 * **Linked** spells (no skill line of their own) inherit the home of the spell that triggers / mentions them.
+* **Weapons & Armor** is one section in each class list: the weapon and armor skill lines (Axes, Daggers, Cloth, Mail, Shield ..., plus the
+  relic proficiencies under GENERIC (DND)) share it instead of getting a heading each.
 * **Mounts and riding** are not class spells. They are listed under Skills -> Mounts / Riding, except the four mounts a class trains
   itself (Summon Warhorse / Charger for Paladins, Summon Felsteed / Dreadsteed for Warlocks), which stay in that class.
   (A skill line whose rows name a single class lets its class-less rows inherit it -- but not the Mounts / Riding lines, whose

@@ -23,6 +23,14 @@ FORM_METAMORPHOSIS = 22           # SpellShapeshiftForm id
 MOUNT_LINES = {"Mounts", "Riding"}          # skill lines of mounts / riding: not a class's own, even when a few rows name a class
 # the only mounts a class trains itself (matched by name; the beta / SoD copies share the names)
 CLASS_MOUNTS = {"Summon Warhorse": "Paladin", "Summon Charger": "Paladin", "Summon Felsteed": "Warlock", "Summon Dreadsteed": "Warlock"}
+# Weapon and armor skill lines share one section, "Weapons & Armor", in every class list (instead of ~20 one-tile headings).
+# GENERIC (DND) is where the relic proficiencies live (Libram, Totem, Fetish).
+WEAPON_ARMOR_SECTION = "Weapons & Armor"
+WEAPON_ARMOR_LINES = {
+    "Axes", "Bows", "Crossbows", "Daggers", "Dual Wield", "Fist Weapons", "Guns", "Maces", "Polearms", "Staves", "Swords",
+    "Thrown", "Two-Handed Axes", "Two-Handed Maces", "Two-Handed Swords", "Wands", "Unarmed",
+    "Cloth", "Leather", "Mail", "Plate Mail", "Shield", "GENERIC (DND)",
+}
 RANK_TEXT = re.compile(r"^Rank \d+$")
 TEST_NAME = re.compile(r"\((TEST|OLD|DND|NYI|PH|DEPRECATED|UNUSED|DEBUG)\)|^zz|^DEPRECATED|\bTEST\b|^OLD\b|\bDND\b", re.I)
 
@@ -151,8 +159,9 @@ def build(con):
             for r in racial_names(int(rm or 0), line, races):
                 out[sp].add(("Racial", r, 0, "", ""))
         elif cm > 0 or sl in line_class:
+            section = WEAPON_ARMOR_SECTION if line in WEAPON_ARMOR_LINES else line
             for c in class_names(cm if cm > 0 else line_class[sl]):
-                out[sp].add(("Class", c, 0, line, ""))
+                out[sp].add(("Class", c, 0, section, ""))
         else:
             out[sp].add(("Skills", line, 0, "", ""))
 
