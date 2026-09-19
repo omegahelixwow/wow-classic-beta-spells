@@ -123,6 +123,18 @@ Every spell page shows how it connects to other spells, from the client data alo
 * **Used by** -- spells whose text takes its numbers from this one (the drain behind a passive proc).
 Talent tooltips add an "Applies ..." line for the aura the talent applies.
 
+## Item data (`items.py`)
+The item tables (`Item`, `ItemSparse`, `ItemEffect`, `ItemXItemEffect`, `ItemSubClass`, the `ItemDamage*` tables) are part of the build.
+* **Equipped weapon reference.** A spell with a `WEAPON_DAMAGE` effect (Shoot, Auto Shot, Throw ...) has no stat coefficient: the weapon you
+  hold supplies the damage. The spell page lists every weapon of the types it requires (from `SpellEquippedItems`, or bow / gun /
+  crossbow for a ranged-slot spell) with its damage: `ItemDamage<Type>[item level][quality]` gives damage per second, times the weapon's
+  speed, spread by its variance. Test and monster items are filtered out. The formula follows TrinityCore's `GetDPS`; it produces plausible
+  classic numbers but has not been checked against in-game tooltips.
+* **Items that use this spell** -- items with an effect that casts it (use / equip / chance on hit / teach).
+* **Enchantments.** A spell that applies an item enchantment (poisons, imbues, weapon enchants; effect types 53, 54, 92, 156 and this build's
+  360) shows the enchantment, and the spells it casts become children in the trigger links: Scroll of Imbue Quickening -> Imbue Quickening ->
+  enchantment "Quickening" -> the proc aura -> +40% ranged attack speed.
+
 ## Links out
 Every spell page links to the same spell on Wowhead's Forever database (`wowhead.com/forever/spell=<id>`), which tracks this game version.
 

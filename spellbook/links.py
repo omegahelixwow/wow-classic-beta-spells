@@ -12,7 +12,7 @@ What a child does is shown as text, its effects, and what it affects: spells (cl
 """
 import collections, re
 
-from . import affects, descriptions
+from . import affects, descriptions, items
 from .db import icon_of, num, q, rows, scalar
 from .flags import label
 
@@ -36,6 +36,12 @@ def _load():
     for r in q("select SpellID, EffectIndex, EffectTriggerSpell t from SpellEffect where EffectTriggerSpell not in ('', '0')"):
         if r["t"] != r["SpellID"] and r["t"] in _names:
             _children[r["SpellID"]].append((r["t"], f"effect {int(r['EffectIndex']) + 1} triggers it"))
+    # a spell that applies an item enchantment (imbue, poison, weapon enchant): the spells the enchantment casts are its children
+    for r in q("select SpellID, EffectIndex, Effect, EffectMiscValue_0 m from SpellEffect where Effect in ('53','54','92','156','360')"):
+        en = items.enchant(r["m"])
+        for line in (en or {}).get("lines", []):
+            if line["spell"] and str(line["spell"]) in _names and str(line["spell"]) != r["SpellID"]:
+                _children[r["SpellID"]].append((str(line["spell"]), f"its enchantment \"{en['name']}\" {line['kind']}"))
     for r in q("select ID, Description_lang d, AuraDescription_lang a from Spell"):
         for ref, tok in REF.findall((r["d"] or "") + " " + (r["a"] or "")):
             if ref == r["ID"] or ref not in _names:
@@ -52,7 +58,9 @@ def _load():
     for parent, kids in _children.items():
         for kid, why in kids:
             _parents[kid].append((parent, why.replace("effect", "its effect").replace("triggers it", "triggers this spell")
-                                  if why.startswith("effect") else "its text uses this spell's duration (it applies this spell)"))
+                                  if why.startswith("effect") else why.replace("(it applies it)", "(it applies this spell)")
+                                  .replace("kind", "").replace(" it", " this spell", 1) if "enchantment" in why
+                                  else "its text uses this spell's duration (it applies this spell)"))
 
 
 def _unique(pairs, skip=()):

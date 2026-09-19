@@ -41,7 +41,12 @@ TALENT_TABLES = [
     "TraitDefinition", "TraitDefinitionEffectPoints", "TraitCond", "TraitCost", "TraitCurrency",
     "TraitCurrencySource", "TraitTreeXTraitCurrency", "TraitSystem", "Curve", "CurvePoint",
 ]
-TABLES = SPELL_TABLES + TALENT_TABLES
+ITEM_TABLES = [
+    "Item", "ItemSparse", "ItemSubClass", "ItemEffect", "ItemXItemEffect",         # items, the spells they cast, weapon type names
+    "ItemDamageWand", "ItemDamageRanged", "ItemDamageThrown",                      # damage per second by item level and quality ...
+    "ItemDamageOneHand", "ItemDamageOneHandCaster", "ItemDamageTwoHand", "ItemDamageTwoHandCaster",
+]
+TABLES = SPELL_TABLES + TALENT_TABLES + ITEM_TABLES
 
 MAX_LEVEL = 60        # level used when scaling $s tokens (EffectRealPointsPerLevel)
 PORT = 8765

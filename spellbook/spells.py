@@ -1,11 +1,12 @@
 """Everything about one spell: the full detail page, the hover tooltip summary, and name / id search."""
 import re
 
-from . import affects, descriptions, links, talents
+from . import affects, descriptions, items, links, talents
 from .db import (class_names, columns, conn, first, fmt_ms, icon_of, nz, num, one, q, races, rows, scalar,
                  skills)
 from .flags import decode, label
 
+EXTRA_EFFECT_NAMES = {360: "ENCHANT_ITEM_TEMPORARY (weapon imbue)"}      # an effect this build added; TrinityCore does not name it yet
 SCHOOLS = {1: "Physical", 2: "Holy", 4: "Fire", 8: "Nature", 16: "Frost", 32: "Shadow", 64: "Arcane"}
 POWER = {0: "Mana", 1: "Rage", 2: "Focus", 3: "Energy", 4: "Combo Points", 6: "Runic Power"}
 PERIODIC_RE = re.compile(r"PERIOD|TICK|HASTE_AFFECTS|DOT|HOT", re.I)
@@ -89,7 +90,9 @@ def _effects(sid, effects, duration_ms):
         eid, aid = int(e.get("Effect") or 0), int(e.get("EffectAura") or 0)
         out.append({
             "index": int(e.get("EffectIndex", 0)) + 1,
-            "effect": f"{label('SpellEffects', eid)} ({eid})",
+            "effect": f"{EXTRA_EFFECT_NAMES.get(eid) or label('SpellEffects', eid)} ({eid})",
+            "enchant": items.enchant(e.get("EffectMiscValue_0")) if eid in items.ENCHANT_EFFECTS else None,
+            "weaponDamage": items.is_weapon_damage(eid),
             "aura": f"{label('AuraType', aid)} ({aid})" if aid else None,
             "auraPeriod(ms)": e.get("EffectAuraPeriod"),
             "effectAttributes": decode("SpellEffectAttributes", e.get("EffectAttributes")),
@@ -302,6 +305,8 @@ def spell(sid, show_sod=False):
         "level": first("SpellLevels", "SpellID", sid).get("SpellLevel"),
         "proc": proc, "effects": _effects(sid, effects, int(num(dur.get("Duration")))), "tables": _raw_tables(sid),
         "affects": affects.affected(sid),
+        "weapons": items.weapon_reference(effects, rows("SpellEquippedItems", "SpellID", sid), bool(int(misc.get("Attributes_0") or 0) & 2)),
+        "itemsUsing": items.used_by_items(sid),
         "triggers": links.triggers(sid), "triggeredBy": links.triggered_by(sid), "usedBy": links.used_by(sid),
     }
 

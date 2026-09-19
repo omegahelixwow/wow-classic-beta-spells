@@ -12,6 +12,8 @@ EXTRA_INDEXES = [
     ("TraitNodeGroupXTraitCond", "TraitNodeGroupID"), ("TraitEdge", "LeftTraitNodeID"),
     ("TraitTreeXTraitCurrency", "TraitTreeID"), ("TraitCond", "TraitTreeID"),
     ("TraitDefinitionEffectPoints", "TraitDefinitionID"), ("CurvePoint", "CurveID"),
+    ("Item", "SubclassID"), ("ItemEffect", "SpellID"), ("ItemXItemEffect", "ItemEffectID"), ("ItemXItemEffect", "ItemID"),
+    ("ItemSubClass", "ClassID"), ("ItemDamageWand", "ItemLevel"), ("ItemDamageRanged", "ItemLevel"), ("ItemDamageThrown", "ItemLevel"),
 ]
 
 

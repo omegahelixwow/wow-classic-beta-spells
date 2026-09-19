@@ -119,6 +119,8 @@ summary{cursor:pointer;color:var(--orange)}
 .card.child{border-left:3px solid var(--blue)}.card.nested{margin:6px 0 0 16px;background:var(--bg)}
 .card.child .rel{margin-bottom:4px}.ctext{color:var(--fg);margin:2px 0 4px;overflow-wrap:anywhere}
 .aff-blk{margin-top:4px;padding-top:4px;border-top:1px dashed var(--line)}.aff-blk:first-of-type{border-top:0}
+.wscroll{max-height:340px;overflow:auto;border:1px solid var(--line)}.wtbl{font-size:12px}.wtbl th{position:sticky;top:0;background:var(--panel2);width:auto}
+.wtbl td,.wtbl th{white-space:nowrap;padding:3px 8px}.wtbl td:first-child{white-space:normal}.itm{padding:3px 0}
 .afc{background:var(--panel);border:1px solid var(--line);color:var(--fg);padding:1px 8px;margin:4px 4px 0 0;cursor:pointer;font:inherit;font-size:12px}
 .afc:hover{border-color:var(--acc)}.afc small{color:var(--dim)}.afc.sod{border-color:var(--sod)}.mod{color:var(--yellow)}
 #tip .aff{margin-top:6px;color:var(--blue)}
