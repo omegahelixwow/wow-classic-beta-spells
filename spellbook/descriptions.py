@@ -76,14 +76,8 @@ def duration_of(spell_id):
     return int(num((one("SpellDuration", misc.get("DurationIndex", "0")) or {}).get("Duration")))
 
 
-def eff_points(spell_id, n, level=C.MAX_LEVEL, overrides=None):
-    """Base points of effect n (1-based), scaled by EffectRealPointsPerLevel up to the spell's MaxLevel / `level`."""
-    if overrides and n in overrides:
-        return overrides[n]
-    es = effects_of(spell_id)
-    if not 1 <= n <= len(es):
-        return None
-    e = es[n - 1]
+def effect_value(spell_id, e, level=C.MAX_LEVEL):
+    """Base points of one effect row, scaled by EffectRealPointsPerLevel up to the spell's MaxLevel / `level`."""
     v = num(e.get("EffectBasePointsF"))
     per = num(e.get("EffectRealPointsPerLevel"))
     if per:
@@ -93,6 +87,15 @@ def eff_points(spell_id, n, level=C.MAX_LEVEL, overrides=None):
         v += per * max(0, min(level, cap) - base)
         v = math.ceil(v - 1e-9) if v >= 0 else -math.ceil(-v - 1e-9)
     return v
+
+
+def eff_points(spell_id, n, level=C.MAX_LEVEL, overrides=None):
+    """Value of effect number n (1-based position in the spell's effect list); `overrides` ({n: value}) replaces it
+    (talent rank curves)."""
+    if overrides and n in overrides:
+        return overrides[n]
+    es = effects_of(spell_id)
+    return effect_value(spell_id, es[n - 1], level) if 1 <= n <= len(es) else None
 
 
 def _fmt(v):

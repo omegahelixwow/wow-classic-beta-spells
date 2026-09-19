@@ -59,8 +59,7 @@ def _scaling(sid, e, duration_ms):
     """What a player wants to know about one effect: its value at level 60, the damage range, spell-power / attack-power
     coefficients, and for periodic effects the per-tick and total figures (ticks = duration / period).
     EffectBonusCoefficient is per tick on a periodic effect, so the total is coefficient x ticks."""
-    n = int(e.get("EffectIndex") or 0) + 1
-    value = descriptions.eff_points(sid, n)
+    value = descriptions.effect_value(sid, e)          # from the row itself: an effect's position in the list can differ from its index
     period = int(num(e.get("EffectAuraPeriod")))
     variance = num(e.get("Variance"))
     sp, ap = round(num(e.get("EffectBonusCoefficient")), 4), round(num(e.get("BonusCoefficientFromAP")), 4)
