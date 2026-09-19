@@ -105,6 +105,13 @@ tab"); per-rank values come from curves. Only the nine class trees (currency 382
 Tabs are the columns of nodes, named after the skill line most of their spells belong to. Three nodes have coordinates 10x
 too large in the data (2 Hunter, 1 Priest); they are shown separately as "off-grid".
 
+## What a talent affects (`affects.py`)
+Found the way the game does it, through class masks: an effect's `EffectSpellClassMask` is matched against every spell's
+`SpellClassOptions` mask in the same class family (`SpellClassSet`). Improved Frostbolt has mask 32 in family 3 (Mage), so it
+affects each Frostbolt rank. For flat / percentage modifier auras the effect's misc value names *what* changes (cast time,
+cooldown, power cost ... from TrinityCore's `SpellModOp`), shown with the value. Only spells that appear in a class list count as
+affected (not NPC copies or helper spells). The spell page has an **Affects** section, and talent tooltips list the spells.
+
 ## Links out
 Every spell page links to the same spell on Wowhead's Forever database (`wowhead.com/forever/spell=<id>`), which tracks this game version.
 

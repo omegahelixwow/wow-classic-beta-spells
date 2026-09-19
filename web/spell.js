@@ -22,6 +22,20 @@ function scalingHtml(sc) {
 const hasCoef = effects => effects.some(e => e.scaling && (e.scaling.sp || e.scaling.ap));
 // Wowhead's "Forever" database is the one for this game version (patch 1.60.1); /spell=<id> works without the name slug.
 const wowheadUrl = id => `https://www.wowhead.com/forever/spell=${id}`;
+// ---- "Affects": the spells a modifier (a talent, usually) applies to, found through class masks ----
+function affectsHtml(groups) {
+  const vis = sp => state.sod ? sp.members : sp.members.filter(m => m.origin !== 'sod');       // hide SoD spells unless the switch is on
+  const cards = (groups || []).map(g => {
+    const chips = g.spells.map(sp => {
+      const m = vis(sp); if (!m.length) return '';
+      const top = m[m.length - 1], sod = m.every(x => x.origin === 'sod');
+      return `<button class="afc${sod ? ' sod' : ''}" data-go="${top.id}">${esc(sp.name)}${m.length > 1 ? ` <small>R${m[0].rank}–${top.rank}</small>` : ''}</button>`;
+    }).join('');
+    if (!chips) return '';
+    return `<div class="card"><b>#${g.effect} ${esc(g.aura)}</b>${g.op ? ` · ${esc(g.op)}` : ''}${g.value ? ` · <b class="mod">${esc(g.value)}</b>` : ''}<div>${chips}</div></div>`;
+  }).join('');
+  return cards ? `<h2>Affects</h2><p class="dim" style="margin:0 0 8px;font-size:12px">Spells this one modifies: each effect's class mask is matched against every spell's class mask in the same class family. Values are per rank of the talent.</p>${cards}` : '';
+}
 const ORIGIN_LABEL = {vanilla: 'Vanilla', sod: 'Season of Discovery', new: 'New in this beta'};
 
 async function renderSpell(id) {
@@ -58,6 +72,8 @@ async function renderSpell(id) {
       ${e['auraPeriod(ms)'] && e['auraPeriod(ms)'] !== '0' ? `<div class="dim">Tick period: ${e['auraPeriod(ms)']} ms</div>` : ''}${e.mechanic ? `<div class="dim">Mechanic: ${esc(e.mechanic)}</div>` : ''}
       ${e.effectAttributes.length ? `<div class="grp"><b>EffectAttrs</b>${e.effectAttributes.map(x => flag(x)).join('')}</div>` : ''}
       <details><summary>raw</summary>${kv(e.raw)}</details></div>`).join('') || '<p class="dim">None</p>');
+
+  h += affectsHtml(s.affects);
 
   const F = s.flags, sec = (t, xs, hot) => xs.length ? `<div class="grp"><b>${t}</b>${xs.map(x => flag(x, hot)).join('')}</div>` : '';
   const key = sec('Periodic', F.periodic, 1) + sec('Proc', F.proc, 1) + sec('Interrupt', F.interrupt) + sec('Aura interrupt', F.auraInterrupt) + sec('Channel interrupt', F.channelInterrupt) + sec('Target flags', F.targets)

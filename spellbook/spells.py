@@ -1,7 +1,7 @@
 """Everything about one spell: the full detail page, the hover tooltip summary, and name / id search."""
 import re
 
-from . import descriptions, talents
+from . import affects, descriptions, talents
 from .db import (class_names, columns, conn, first, fmt_ms, icon_of, nz, num, one, q, races, rows, scalar,
                  skills)
 from .flags import decode, label
@@ -293,6 +293,7 @@ def spell(sid, show_sod=False):
                        "dispel": label("DispelType", cats["DispelType"]) if int(cats.get("DispelType") or 0) else None},
         "level": first("SpellLevels", "SpellID", sid).get("SpellLevel"),
         "proc": proc, "effects": _effects(sid, effects, int(num(dur.get("Duration")))), "tables": _raw_tables(sid),
+        "affects": affects.affected(sid),
     }
 
 

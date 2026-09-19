@@ -9,7 +9,7 @@ Only the class trees are built (tree currency 3820, ~50 nodes, 3 tabs); the part
 """
 import collections
 
-from . import descriptions
+from . import affects, descriptions
 from .db import class_names, classes, icons, num, q, q1, scalar
 
 NODE_TYPES = {0: "Single", 1: "Tiered", 2: "Choice"}
@@ -213,7 +213,8 @@ def _entry(e):
         texts.append(descriptions.render(raw, sid, 0, ov or None))
     return {"entryId": int(e["eid"]), "spell": int(sid), "name": name, "maxRanks": ranks,
             "shape": SHAPES.get(int(num(e["NodeEntryType"])), f"type {e['NodeEntryType']}"),
-            "icon": icon, "ranks": texts, "scaled": bool(eff_pts), "origin": origin_of(sid)}
+            "icon": icon, "ranks": texts, "scaled": bool(eff_pts), "origin": origin_of(sid),
+            "affects": affects.names(sid)}          # the spells this talent modifies, found through class masks
 
 
 def origin_of(sid):
