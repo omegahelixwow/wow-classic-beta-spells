@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Spell Browser</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="bar">
+  <div class="r1">
+    <a class="brand" href="#home" title="Home">spellbook</a>
+    <div class="srch"><input id="q" placeholder="Search name or spell ID…" autocomplete="off" autofocus><div class="res" id="res" hidden></div></div>
+    <label class="sodsw" title="Season of Discovery spells are hidden by default"><input type="checkbox" id="sod"> Show SoD</label>
+    <span class="meta" id="meta"></span>
+  </div>
+  <nav id="nav"></nav>
+</header>
+<main id="main"></main>
+<div id="tip" hidden></div>
+<script src="core.js"></script>
+<script src="static.js"></script>
+<script src="tooltip.js"></script>
+<script src="nav.js"></script>
+<script src="list.js"></script>
+<script src="spell.js"></script>
+<script src="talents.js"></script>
+<script src="home.js"></script>
+<script src="router.js"></script>
+</body>
+</html>

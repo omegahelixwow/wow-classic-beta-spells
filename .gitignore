@@ -1,0 +1,8 @@
+# generated / downloaded -- rebuilt by build.py (and by the GitHub Action); never committed
+data/
+dist/
+legacy/
+__pycache__/
+*.pyc
+*.db
+*.db.new
